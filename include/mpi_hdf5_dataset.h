@@ -9,8 +9,8 @@
 #ifndef MPI_HDF5_DATASET_H
 #define MPI_HDF5_DATASET_H
 
-#include "hdf5_dataset_t.h"
-#include "oknok_t.h"
+#include "types/hdf5_dataset_t.h"
+#include "types/oknok_t.h"
 
 #include "hdf5.h"
 #include "mpi.h"

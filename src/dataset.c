@@ -8,10 +8,10 @@
 
 #include "dataset.h"
 
-#include "bit_utils.h"
-#include "dataset_t.h"
-#include "oknok_t.h"
-#include "word_t.h"
+#include "types/dataset_t.h"
+#include "types/oknok_t.h"
+#include "types/word_t.h"
+#include "utils/bit.h"
 
 #include <stdbool.h>
 #include <stdio.h>

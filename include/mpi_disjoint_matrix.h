@@ -9,10 +9,10 @@
 #ifndef MPI_DISJOINT_MATRIX_H
 #define MPI_DISJOINT_MATRIX_H
 
-#include "dataset_t.h"
-#include "dm_t.h"
-#include "hdf5_dataset_t.h"
-#include "oknok_t.h"
+#include "types/dataset_t.h"
+#include "types/dm_t.h"
+#include "types/hdf5_dataset_t.h"
+#include "types/oknok_t.h"
 
 #include <stdint.h>
 

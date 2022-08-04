@@ -9,8 +9,8 @@
 #ifndef JNSQ_H
 #define JNSQ_H
 
-#include "dataset_t.h"
-#include "word_t.h"
+#include "types/dataset_t.h"
+#include "types/word_t.h"
 
 #include <stdint.h>
 

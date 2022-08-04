@@ -8,15 +8,17 @@
 
 #include "mpi_disjoint_matrix.h"
 
-#include "bit_utils.h"
-#include "dataset_t.h"
 #include "disjoint_matrix.h"
-#include "dm_t.h"
 #include "hdf5_dataset.h"
-#include "hdf5_dataset_t.h"
-#include "oknok_t.h"
-#include "steps_t.h"
-#include "word_t.h"
+#include "types/dataset_t.h"
+#include "types/dm_t.h"
+#include "types/hdf5_dataset_t.h"
+#include "types/oknok_t.h"
+#include "types/steps_t.h"
+#include "types/word_t.h"
+#include "utils/bit.h"
+#include "utils/block.h"
+#include "utils/math.h"
 
 #include "hdf5.h"
 
@@ -25,30 +27,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-// First element controlled by process id out of p processes, array length n
-#define BLOCK_LOW(id, p, n) ((id) * (n) / (p))
-
-// Last element controlled by process id out of p processes, array length n
-#define BLOCK_HIGH(id, p, n) (BLOCK_LOW((id + 1), p, n) - 1)
-
-// Size of the block controlled by process id out of p processes, array length n
-#define BLOCK_SIZE(id, p, n) (BLOCK_LOW((id + 1), p, n) - BLOCK_LOW(id, p, n))
-
-// Process that controls item index from array with length n, p processes
-#define BLOCK_OWNER(index, p, n) (((p) * ((index) + 1) - 1) / (n))
-
-uint32_t roundUp(uint32_t numToRound, uint32_t multiple)
-{
-	if (multiple == 0)
-		return numToRound;
-
-	uint32_t remainder = numToRound % multiple;
-	if (remainder == 0)
-		return numToRound;
-
-	return numToRound + multiple - remainder;
-}
 
 oknok_t mpi_create_line_dataset(const hdf5_dataset_t* hdf5_dset,
 								const dataset_t* dset, const dm_t* dm,

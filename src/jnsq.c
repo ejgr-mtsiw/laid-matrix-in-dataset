@@ -8,10 +8,10 @@
 
 #include "jnsq.h"
 
-#include "bit_utils.h"
 #include "dataset.h"
-#include "dataset_t.h"
-#include "word_t.h"
+#include "types/dataset_t.h"
+#include "types/word_t.h"
+#include "utils/bit.h"
 
 #include <math.h>
 #include <stdint.h>

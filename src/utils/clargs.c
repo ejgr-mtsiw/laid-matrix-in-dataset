@@ -1,12 +1,12 @@
 /*
  ============================================================================
- Name        : clargs.c
+ Name        : utils/clargs.c
  Author      : Eduardo Ribeiro
  Description : Structures and functions to manage command line arguments
  ============================================================================
  */
 
-#include "clargs.h"
+#include "utils/clargs.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +14,7 @@
 
 int read_args(int argc, char** argv, clargs_t* args)
 {
-	int c = 0;
+	int c  = 0;
 	opterr = 0;
 
 	// Set defaults

@@ -1,13 +1,13 @@
 /*
  ============================================================================
- Name        : globals.h
+ Name        : utils/timing.h
  Author      : Eduardo Ribeiro
- Description : Global variables definitions
+ Description : Timing helpers
  ============================================================================
  */
 
-#ifndef TIMING_H__
-#define TIMING_H__
+#ifndef UTILS_TIMING_H__
+#define UTILS_TIMING_H__
 
 #include <time.h>
 
@@ -30,4 +30,4 @@
 //#define TICK
 //#define TOCK(stream) fprintf(stream, "\n");
 
-#endif // TIMING_H__
+#endif // UTIL_TIMING_H__

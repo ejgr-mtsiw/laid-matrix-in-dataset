@@ -6,10 +6,12 @@ OBJ_DIR			:= $(BUILD)/objects
 APP_DIR			:= $(BUILD)
 TARGET			:= laid-hdf5-mpi
 INCLUDE			:= -Iinclude -I/usr/local/include -I /usr/include -I/usr/include/openmpi-x86_64
-SRC				:= $(wildcard src/*.c)
+#SRC				:= $(wildcard src/*.c)
+SRC_DIRS		:= ./src
+SRC				:= $(shell find $(SRC_DIRS) -name *.c)
 
 OBJECTS			:= $(SRC:%.c=$(OBJ_DIR)/%.o)
-DEPENDENCIES		:= $(OBJECTS:.o=.d)
+DEPENDENCIES	:= $(OBJECTS:.o=.d)
 
 all: build $(APP_DIR)/$(TARGET)
 

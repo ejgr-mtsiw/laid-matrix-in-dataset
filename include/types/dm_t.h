@@ -9,7 +9,7 @@
 #ifndef DM_T_H
 #define DM_T_H
 
-#include "steps_t.h"
+#include "types/steps_t.h"
 
 #include <stdint.h>
 

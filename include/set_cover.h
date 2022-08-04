@@ -9,9 +9,9 @@
 #ifndef SET_COVER_H
 #define SET_COVER_H
 
-#include "cover_t.h"
-#include "hdf5_dataset_t.h"
-#include "oknok_t.h"
+#include "types/cover_t.h"
+#include "types/hdf5_dataset_t.h"
+#include "types/oknok_t.h"
 
 #include <stdint.h>
 

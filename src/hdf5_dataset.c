@@ -8,10 +8,10 @@
 
 //#include "hdf5_dataset.h"
 
-#include "dataset_t.h"
 #include "hdf5_dataset.h"
-#include "oknok_t.h"
-#include "word_t.h"
+#include "types/dataset_t.h"
+#include "types/oknok_t.h"
+#include "types/word_t.h"
 
 #include "hdf5.h"
 

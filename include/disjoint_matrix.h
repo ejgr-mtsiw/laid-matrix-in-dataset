@@ -9,8 +9,8 @@
 #ifndef DISJOINT_MATRIX_H
 #define DISJOINT_MATRIX_H
 
-#include "dataset_t.h"
-#include "oknok_t.h"
+#include "types/dataset_t.h"
+#include "types/oknok_t.h"
 
 #include "hdf5.h"
 

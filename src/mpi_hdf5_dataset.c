@@ -9,8 +9,8 @@
 #include "mpi_hdf5_dataset.h"
 
 #include "hdf5_dataset.h"
-#include "hdf5_dataset_t.h"
-#include "oknok_t.h"
+#include "types/hdf5_dataset_t.h"
+#include "types/oknok_t.h"
 
 #include "hdf5.h"
 #include "mpi.h"
@@ -19,6 +19,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
+
 
 oknok_t mpi_hdf5_open_dataset(const char* filename, const char* datasetname,
 							  const MPI_Comm comm, const MPI_Info info,
