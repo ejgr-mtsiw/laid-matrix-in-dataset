@@ -49,6 +49,8 @@ int main(int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 
+	SETUP_TIMING
+
 	/*
 	 * Initialize MPI
 	 */
@@ -99,21 +101,20 @@ int main(int argc, char** argv)
 	// if we already have the matrix in the hdf5 dataset
 	// Only root checks to avoid having all processes trying
 	// to open and read the file at the same time
-	uint8_t skip_matrix_creation = 0;
+	uint8_t skip_dm_creation = 0;
 	if (rank == 0)
 	{
-		skip_matrix_creation = is_matrix_created(args.filename);
+		skip_dm_creation = hdf5_dataset_exists(hdf5_dset.file_id, DM_LINE_DATA);
 
 		printf("- Disjoint matrix dataset %sfound!.\n",
-			   skip_matrix_creation ? "" : "not ");
+			   skip_dm_creation ? "" : "not ");
 	}
 
-	MPI_Bcast(&skip_matrix_creation, 1, MPI_INT8_T, 0, comm);
+	MPI_Bcast(&skip_dm_creation, 1, MPI_INT8_T, 0, comm);
 
-	if (!skip_matrix_creation)
+	if (!skip_dm_creation)
 	{
-		// SETUP_TIMING
-		// TICK;
+		 TICK;
 
 		// Only rank 0 on a node actually allocates memory
 		uint64_t localtablesize = 0;
@@ -158,7 +159,8 @@ int main(int argc, char** argv)
 								 &dataset.data);
 		}
 
-		SETUP_TIMING
+		fprintf(stdout, "- Finished MPI RMA Init ");
+		TOCK(stdout)
 
 		// All table pointers should now point to copy on noderank 0
 		// Setup dataset
@@ -277,7 +279,6 @@ int main(int argc, char** argv)
 
 		if (node_rank == 0)
 		{
-			SETUP_TIMING
 			TICK;
 
 			fprintf(stdout, "- Generating matrix steps\n");
@@ -369,6 +370,7 @@ int main(int argc, char** argv)
 		{
 			fprintf(stdout, " - Finished building disjoint matrix [1/2] ");
 			TOCK(stdout)
+			TICK;
 		}
 
 		mpi_create_column_dataset(&hdf5_dset, &dataset, &dm, rank, size);
