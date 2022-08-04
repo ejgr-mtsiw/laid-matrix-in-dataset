@@ -9,17 +9,13 @@
 #ifndef DISJOINT_MATRIX_H
 #define DISJOINT_MATRIX_H
 
-#include "dataset.h"
+#include "dataset_t.h"
+#include "oknok_t.h"
 
 #include "hdf5.h"
 
+#include <stdbool.h>
 #include <stdint.h>
-
-typedef struct steps_t
-{
-	uint32_t indexA;
-	uint32_t indexB;
-} steps_t;
 
 /**
  * Calculates the number of lines for the disjoint matrix

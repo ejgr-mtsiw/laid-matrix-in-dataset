@@ -9,6 +9,11 @@
 #ifndef JNSQ_H
 #define JNSQ_H
 
+#include "dataset_t.h"
+#include "word_t.h"
+
+#include <stdint.h>
+
 /**
  * Replaces the class bits with jnsq bits
  * It's ok, because the number of jnsq bits is always <= bits needed for class

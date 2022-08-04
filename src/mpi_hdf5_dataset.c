@@ -8,10 +8,9 @@
 
 #include "mpi_hdf5_dataset.h"
 
-#include "dataset.h"
 #include "hdf5_dataset.h"
+#include "hdf5_dataset_t.h"
 #include "oknok_t.h"
-#include "word_t.h"
 
 #include "hdf5.h"
 #include "mpi.h"
@@ -47,23 +46,6 @@ oknok_t mpi_hdf5_open_dataset(const char* filename, const char* datasetname,
 	dataset->file_id	= fid;
 	dataset->dataset_id = dsetid;
 	hdf5_get_dataset_dimensions(dsetid, dataset->dimensions);
-
-	return OK;
-}
-
-oknok_t mpi_hdf5_read_dataset(const char* filename, const char* datasetname,
-							  const MPI_Comm comm, const MPI_Info info,
-							  dataset_t* dataset)
-{
-	hdf5_dataset_t hdf5_dataset;
-
-	mpi_hdf5_open_dataset(filename, datasetname, comm, info, &hdf5_dataset);
-
-	hdf5_read_dataset_attributes(hdf5_dataset.dataset_id, dataset);
-
-	hdf5_read_data(hdf5_dataset.dataset_id, dataset);
-
-	hdf5_close_dataset(&hdf5_dataset);
 
 	return OK;
 }

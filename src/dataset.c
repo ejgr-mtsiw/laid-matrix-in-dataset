@@ -9,7 +9,9 @@
 #include "dataset.h"
 
 #include "bit_utils.h"
-#include "dataset.h"
+#include "dataset_t.h"
+#include "oknok_t.h"
+#include "word_t.h"
 
 #include <stdbool.h>
 #include <stdio.h>

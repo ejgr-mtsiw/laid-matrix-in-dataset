@@ -9,31 +9,13 @@
 #ifndef HDF5_DATASET_H
 #define HDF5_DATASET_H
 
-#include "dataset.h"
+#include "dataset_t.h"
+#include "hdf5_dataset_t.h"
 #include "oknok_t.h"
 
 #include "hdf5.h"
 
 #include <stdint.h>
-
-typedef struct hdf5_dataset_t
-{
-	/**
-	 * file_id
-	 */
-	hid_t file_id;
-
-	/**
-	 * dataset_id
-	 */
-	hid_t dataset_id;
-
-	/**
-	 * Dimensions
-	 */
-	hsize_t dimensions[2];
-
-} hdf5_dataset_t;
 
 /**
  * The name of the dataset that will store the disjoint matrix

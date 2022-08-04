@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 typedef int8_t oknok_t; // Is OK or NOK
-#define NOK -1
+#define NOK -1 // To be compatible with herr_t
 #define OK	1
 
 #endif // OKNOK_T_H__

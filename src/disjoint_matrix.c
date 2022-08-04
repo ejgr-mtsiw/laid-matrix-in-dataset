@@ -9,8 +9,9 @@
 #include "disjoint_matrix.h"
 
 #include "bit_utils.h"
-#include "dataset.h"
+#include "dataset_t.h"
 #include "hdf5_dataset.h"
+#include "hdf5_dataset_t.h"
 #include "oknok_t.h"
 #include "timing.h"
 #include "word_t.h"
@@ -260,7 +261,7 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t* dataset)
 	uint32_t n_classes = dataset->n_classes;
 
 	// Observations per class
-	//uint32_t* class_obs = dataset->observations_per_class;
+	// uint32_t* class_obs = dataset->observations_per_class;
 
 	// Number of observations per class
 	uint32_t* n_class_obs = dataset->n_observations_per_class;

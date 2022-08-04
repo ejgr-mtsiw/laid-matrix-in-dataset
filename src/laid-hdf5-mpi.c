@@ -9,6 +9,7 @@
 #include "clargs.h"
 #include "dataset.h"
 #include "disjoint_matrix.h"
+#include "hdf5_dataset.h"
 #include "jnsq.h"
 #include "mpi_disjoint_matrix.h"
 #include "mpi_hdf5_dataset.h"
@@ -160,7 +161,7 @@ int main(int argc, char** argv)
 		SETUP_TIMING
 
 		// All table pointers should now point to copy on noderank 0
-		// Initialise table on rank 0 with appropriate synchronisation
+		// Setup dataset
 		MPI_Win_fence(0, win_shared_dset);
 
 		if (node_rank == 0)
@@ -176,7 +177,7 @@ int main(int argc, char** argv)
 
 			print_dataset_details(stdout, &dataset);
 
-			fprintf(stdout, "- Finished loading dataset data ");
+			fprintf(stdout, " - Finished loading dataset data ");
 
 			TOCK(stdout)
 			TICK;
@@ -190,7 +191,7 @@ int main(int argc, char** argv)
 				   dataset.n_words * sizeof(word_t), compare_lines_extra,
 				   &dataset.n_words);
 
-			fprintf(stdout, "- Sorted dataset");
+			fprintf(stdout, " - Sorted dataset");
 			TOCK(stdout)
 			TICK;
 
@@ -231,6 +232,7 @@ int main(int argc, char** argv)
 			TOCK(stdout)
 		}
 
+		// End setup dataset
 		MPI_Win_fence(0, win_shared_dset);
 
 		// Only rank 0 on a node actually allocates memory
@@ -270,7 +272,7 @@ int main(int argc, char** argv)
 		}
 
 		// All table pointers should now point to copy on noderank 0
-		// Initialise table on rank 0 with appropriate synchronisation
+		// Setup steps
 		MPI_Win_fence(0, win_shared_steps);
 
 		if (node_rank == 0)
@@ -310,22 +312,43 @@ int main(int argc, char** argv)
 			// steps[i].indexB+1);
 			//			}
 
-			fprintf(stdout, "- Finished generating matrix steps ");
+			fprintf(stdout, " - Finished generating matrix steps ");
 			TOCK(stdout)
 		}
 
+		// end setup steps
 		MPI_Win_fence(0, win_shared_steps);
 
 		if (rank == 0)
 		{
-			fprintf(stdout, "- Broadcasting number of matrix lines\n");
+			fprintf(stdout, "- Broadcasting attributes\n");
 		}
 
-		MPI_Bcast(&n_matrix_lines, 1, MPI_UINT64_T, 0, comm);
+		uint64_t toshare[4];
+		if (rank == 0)
+		{
+			toshare[0] = dataset.n_attributes;
+			toshare[1] = dataset.n_observations;
+			toshare[2] = dataset.n_words;
+			toshare[3] = n_matrix_lines;
+		}
+		MPI_Bcast(&toshare, 4, MPI_UINT64_T, 0, comm);
+
+		dm_t dm;
+		dm.steps		  = steps;
+		dm.n_matrix_lines = n_matrix_lines;
+
+		if (rank != 0)
+		{
+			dataset.n_attributes   = toshare[0];
+			dataset.n_observations = toshare[1];
+			dataset.n_words		   = toshare[2];
+			dm.n_matrix_lines	   = toshare[3];
+		}
 
 		if (rank == 0)
 		{
-			fprintf(stdout, "- Finished broadcasting number of matrix lines\n");
+			fprintf(stdout, " - Finished broadcasting attributes\n");
 		}
 
 		if (rank == 0)
@@ -339,13 +362,21 @@ int main(int argc, char** argv)
 		}
 
 		// Build part of the disjoint matrix and store it in the hdf5 file
-		mpi_create_line_dataset(hdf5_dset, dataset.data, n_matrix_lines,
-								n_words, steps, rank, size);
+		mpi_create_line_dataset(&hdf5_dset, &dataset, &dm, rank, size);
 
 		MPI_Barrier(comm);
 		if (rank == 0)
 		{
-			fprintf(stdout, "Finished building disjoint matrix ");
+			fprintf(stdout, " - Finished building disjoint matrix [1/2] ");
+			TOCK(stdout)
+		}
+
+		mpi_create_column_dataset(&hdf5_dset, &dataset, &dm, rank, size);
+
+		MPI_Barrier(comm);
+		if (rank == 0)
+		{
+			fprintf(stdout, " - Finished building disjoint matrix [2/2] ");
 			TOCK(stdout)
 		}
 
@@ -354,8 +385,9 @@ int main(int argc, char** argv)
 
 		dataset.data = NULL;
 		free_dataset(&dataset);
-
 		hdf5_close_dataset(&hdf5_dset);
+
+		goto the_end;
 
 		//		unsigned long matrix_lines = get_dm_n_lines(&dataset);
 		//
@@ -398,7 +430,7 @@ int main(int argc, char** argv)
 	//	//	free_cover(&cover);
 	//	//	TOCK(stdout)
 
-	// the_end:
+the_end:
 	//  Wait for everyone
 	MPI_Barrier(comm);
 
