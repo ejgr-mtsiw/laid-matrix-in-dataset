@@ -1,0 +1,14 @@
+﻿---
+BasedOnStyle: Webkit
+BreakBeforeBraces: Allman
+AlignAfterOpenBracket: Align
+AlignConsecutiveMacros: Consecutive
+AlignConsecutiveAssignments: Consecutive
+IndentGotoLabels: false
+IndentCaseLabels: true
+ColumnLimit: 80
+SpaceAfterCStyleCast: true
+TabWidth: 4
+UseTab: Always
+
+...
