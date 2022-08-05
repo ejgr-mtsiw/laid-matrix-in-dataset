@@ -164,8 +164,11 @@ int main(int argc, char** argv)
 								 &dataset.data);
 		}
 
-		fprintf(stdout, "- Finished MPI RMA Init ");
-		TOCK(stdout)
+		if (rank == 0)
+		{
+			fprintf(stdout, "- Finished MPI RMA Init ");
+			TOCK(stdout)
+		}
 
 		// All table pointers should now point to copy on noderank 0
 		// Setup dataset
