@@ -9,7 +9,7 @@
 #ifndef DATASET_T_H
 #define DATASET_T_H
 
-#include "types/word_t.h"
+#include "../types/word_t.h"
 
 #include <stdint.h>
 

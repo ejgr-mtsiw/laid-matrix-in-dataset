@@ -1,14 +1,13 @@
 /*
  ============================================================================
- Name        : hdf5_dataset.c
+ Name        : dataset_hdf5.c
  Author      : Eduardo Ribeiro
  Description : Structures and functions to manage HDF5 datasets
  ============================================================================
  */
 
-//#include "hdf5_dataset.h"
+#include "dataset_hdf5.h"
 
-#include "hdf5_dataset.h"
 #include "types/dataset_t.h"
 #include "types/oknok_t.h"
 #include "types/word_t.h"
@@ -44,7 +43,7 @@ bool hdf5_file_has_dataset(const char* filename, const char* datasetname)
 	return exists;
 }
 
-oknok_t hdf5_open_dataset(hdf5_dataset_t* dataset, const char* filename,
+oknok_t hdf5_open_dataset(dataset_hdf5_t* dataset, const char* filename,
 						  const char* datasetname)
 {
 	// Open the data file
@@ -78,7 +77,7 @@ oknok_t hdf5_read_dataset(const char* filename, const char* datasetname,
 {
 	oknok_t ret = OK;
 
-	hdf5_dataset_t hdf5_dataset;
+	dataset_hdf5_t hdf5_dataset;
 
 	ret = hdf5_open_dataset(&hdf5_dataset, filename, datasetname);
 	if (ret != OK)
@@ -232,7 +231,7 @@ oknok_t hdf5_read_data(hid_t dataset_id, dataset_t* dataset)
 	return OK;
 }
 
-oknok_t hdf5_read_line(const hdf5_dataset_t* dataset, const uint32_t index,
+oknok_t hdf5_read_line(const dataset_hdf5_t* dataset, const uint32_t index,
 					   const uint32_t n_words, word_t* line)
 {
 	// Setup offset
@@ -334,7 +333,7 @@ void hdf5_get_dataset_dimensions(hid_t dataset_id, hsize_t* dataset_dimensions)
 	H5Sclose(dataset_space_id);
 }
 
-void hdf5_close_dataset(hdf5_dataset_t* dataset)
+void hdf5_close_dataset(dataset_hdf5_t* dataset)
 {
 	H5Dclose(dataset->dataset_id);
 	H5Fclose(dataset->file_id);

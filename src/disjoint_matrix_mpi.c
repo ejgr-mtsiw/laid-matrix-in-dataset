@@ -1,18 +1,18 @@
 /*
  ============================================================================
- Name        : disjoint_matrix.c
+ Name        : disjoint_matrix_mpi.c
  Author      : Eduardo Ribeiro
  Description : Structures and functions to manage the disjoint matrix
  ============================================================================
  */
 
-#include "mpi_disjoint_matrix.h"
+#include "disjoint_matrix_mpi.h"
 
+#include "dataset_hdf5.h"
 #include "disjoint_matrix.h"
-#include "hdf5_dataset.h"
+#include "types/dataset_hdf5_t.h"
 #include "types/dataset_t.h"
 #include "types/dm_t.h"
-#include "types/hdf5_dataset_t.h"
 #include "types/oknok_t.h"
 #include "types/steps_t.h"
 #include "types/word_t.h"
@@ -28,9 +28,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-oknok_t mpi_create_line_dataset(const hdf5_dataset_t* hdf5_dset,
-								const dataset_t* dset, const dm_t* dm,
-								const int rank, const int size)
+oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
+								const dataset_t* dset, const dm_t* dm)
 {
 	// Dataset dimensions
 	hsize_t dimensions[2] = { dm->n_matrix_lines, dset->n_words };
@@ -76,22 +75,17 @@ oknok_t mpi_create_line_dataset(const hdf5_dataset_t* hdf5_dset,
 	assert(buffer != NULL);
 
 	// This process will write this many lines
-	uint32_t n_lines = BLOCK_SIZE(rank, size, dm->n_matrix_lines);
-
-	// The lines to generate/save start at
-	uint32_t start = BLOCK_LOW(rank, size, dm->n_matrix_lines);
-
-	steps_t* s	   = dm->steps + start;
-	steps_t* s_end = s + n_lines;
+	steps_t* s	   = dm->steps;
+	steps_t* s_end = s + dm->s_size;
 
 	// Allocate line totals buffer
-	uint32_t* lt_buffer = (uint32_t*) calloc(n_lines, sizeof(uint32_t));
+	uint32_t* lt_buffer = (uint32_t*) calloc(dm->s_size, sizeof(uint32_t));
 	assert(lt_buffer != NULL);
 
 	// Current line index on line totals buffer
 	uint32_t cl = 0;
 
-	for (; s < s_end; s++)
+	for (; s < s_end; s++, cl++)
 	{
 		word_t* la = dset->data + (s->indexA * dset->n_words);
 		word_t* lb = dset->data + (s->indexB * dset->n_words);
@@ -112,7 +106,7 @@ oknok_t mpi_create_line_dataset(const hdf5_dataset_t* hdf5_dset,
 
 		// We will write one line at a time
 		hsize_t count[2]  = { 1, dset->n_words };
-		hsize_t offset[2] = { start + cl, 0 };
+		hsize_t offset[2] = { dm->s_offset + cl, 0 };
 
 		// Select hyperslab on file dataset
 		err = H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, offset, NULL,
@@ -139,20 +133,17 @@ oknok_t mpi_create_line_dataset(const hdf5_dataset_t* hdf5_dset,
 		H5Pclose(xfer_plist);
 		H5Sclose(memspace_id);
 		H5Sclose(filespace_id);
-
-		cl++;
 	}
 
 	H5Dclose(dset_id);
 
 	// Save line totals dataset
-	mpi_write_line_totals(hdf5_dset, lt_buffer, start, n_lines,
-						  dm->n_matrix_lines);
+	mpi_write_line_totals(hdf5_dset, dm, lt_buffer);
 
 	return OK;
 }
 
-oknok_t mpi_create_column_dataset(const hdf5_dataset_t* hdf5_dset,
+oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 								  const dataset_t* dset, const dm_t* dm,
 								  const int rank, const int size)
 {
@@ -321,15 +312,13 @@ oknok_t mpi_create_column_dataset(const hdf5_dataset_t* hdf5_dset,
 	return OK;
 }
 
-oknok_t mpi_write_line_totals(const hdf5_dataset_t* hdf5_dset,
-							  const uint32_t* data, const uint32_t start,
-							  const uint32_t n_lines,
-							  const uint32_t n_matrix_lines)
+oknok_t mpi_write_line_totals(const dataset_hdf5_t* hdf5_dset, const dm_t* dm,
+							  const uint32_t* data)
 {
 
 	// CREATE OUTPUT DATASET
 	// Output dataset dimensions
-	hsize_t dimensions[2] = { n_matrix_lines, 1 };
+	hsize_t dimensions[2] = { dm->n_matrix_lines, 1 };
 
 	hid_t filespace_id = H5Screate_simple(2, dimensions, NULL);
 	assert(filespace_id != NOK);
@@ -359,15 +348,15 @@ oknok_t mpi_write_line_totals(const hdf5_dataset_t* hdf5_dset,
 	H5Pclose(dapl_id);
 	H5Pclose(dcpl_id);
 
-	hsize_t offset[2] = { start, 0 };
-	hsize_t count[2]  = { n_lines, 1 };
+	hsize_t offset[2] = { dm->s_offset, 0 };
+	hsize_t count[2]  = { dm->s_size, 1 };
 
 	// Create a memory dataspace to indicate the size of our buffer/chunk
-	hsize_t mem_dimensions[2] = { n_lines, 1 };
+	hsize_t mem_dimensions[2] = { dm->s_size, 1 };
 	hid_t memspace_id		  = H5Screate_simple(2, mem_dimensions, NULL);
 	assert(memspace_id != NOK);
 
-	if (n_lines == 0)
+	if (dm->s_size == 0)
 	{
 		// Nothing to save
 		H5Sselect_none(filespace_id);
@@ -394,7 +383,7 @@ oknok_t mpi_write_line_totals(const hdf5_dataset_t* hdf5_dset,
 	return OK;
 }
 
-oknok_t mpi_write_attribute_totals(const hdf5_dataset_t* hdf5_dset,
+oknok_t mpi_write_attribute_totals(const dataset_hdf5_t* hdf5_dset,
 								   const uint32_t* data, const uint32_t start,
 								   const uint32_t n_lines,
 								   const uint32_t n_attributes)

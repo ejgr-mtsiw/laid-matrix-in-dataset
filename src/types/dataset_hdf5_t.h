@@ -1,6 +1,6 @@
 /*
  ============================================================================
- Name        : hdf5_dataset_t.h
+ Name        : dataset_hdf5_t.h
  Author      : Eduardo Ribeiro
  Description : Datatype representing one hgf5 dataset
  ============================================================================
@@ -11,7 +11,7 @@
 
 #include "hdf5.h"
 
-typedef struct hdf5_dataset_t
+typedef struct dataset_hdf5_t
 {
 	/**
 	 * file_id
@@ -28,6 +28,6 @@ typedef struct hdf5_dataset_t
 	 */
 	hsize_t dimensions[2];
 
-} hdf5_dataset_t;
+} dataset_hdf5_t;
 
 #endif // HDF5_DATASET_T_H

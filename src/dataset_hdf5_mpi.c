@@ -1,15 +1,15 @@
 /*
  ============================================================================
- Name        : mpi_hdf5_dataset.c
+ Name        : dataset_hdf5_mpi.c
  Author      : Eduardo Ribeiro
  Description : Structures and functions to manage HDF5 datasets
  ============================================================================
  */
 
-#include "mpi_hdf5_dataset.h"
+#include "dataset_hdf5_mpi.h"
 
-#include "hdf5_dataset.h"
-#include "types/hdf5_dataset_t.h"
+#include "dataset_hdf5.h"
+#include "types/dataset_hdf5_t.h"
 #include "types/oknok_t.h"
 
 #include "hdf5.h"
@@ -20,10 +20,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-
 oknok_t mpi_hdf5_open_dataset(const char* filename, const char* datasetname,
 							  const MPI_Comm comm, const MPI_Info info,
-							  hdf5_dataset_t* dataset)
+							  dataset_hdf5_t* dataset)
 {
 	/* setup file access template */
 	hid_t acc_tpl = H5Pcreate(H5P_FILE_ACCESS);

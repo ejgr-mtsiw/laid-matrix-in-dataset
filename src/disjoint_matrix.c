@@ -8,9 +8,9 @@
 
 #include "disjoint_matrix.h"
 
-#include "hdf5_dataset.h"
+#include "dataset_hdf5.h"
+#include "types/dataset_hdf5_t.h"
 #include "types/dataset_t.h"
-#include "types/hdf5_dataset_t.h"
 #include "types/oknok_t.h"
 #include "types/word_t.h"
 #include "utils/bit.h"
