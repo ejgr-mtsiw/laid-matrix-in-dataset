@@ -23,9 +23,9 @@
  * So the extra bits are zeroed and can be ignored in the calculations
  *
  * Also inconsistency = class
- * See Apol?nia, J., & Cavique, L. (2019). Sele??o de Atributos de Dados
+ * See Apolónia, J., & Cavique, L. (2019). Seleção de Atributos de Dados
  * Inconsistentes em ambiente HDF5+ Python na cloud INCD. Revista de
- * Ci?ncias da Computa??o, 85-112.
+ * Ciências da Computação, 85-112.
  */
 void set_jnsq_bits(word_t* line, uint32_t inconsistency,
 				   const uint32_t n_attributes, const uint32_t n_words,

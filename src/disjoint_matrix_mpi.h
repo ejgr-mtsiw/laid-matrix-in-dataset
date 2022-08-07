@@ -16,8 +16,6 @@
 
 #include <stdint.h>
 
-uint32_t roundUp(uint32_t numToRound, uint32_t multiple);
-
 /**
  * Creates the dataset containing the disjoint matrix with attributes as columns
  */
@@ -31,13 +29,6 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 								  const dataset_t* dset, const dm_t* dm,
 								  const int rank, const int size);
-
-/**
- * Writes the matrix atributes in the dataset
- */
-herr_t mpi_write_disjoint_matrix_attributes(const hid_t dataset_id,
-											const uint32_t n_attributes,
-											const uint32_t n_matrix_lines);
 
 /**
  * Writes the line totals metadata to the dataset
