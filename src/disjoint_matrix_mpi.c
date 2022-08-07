@@ -86,7 +86,6 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 
 	for (; s < s_end; s++, cl++)
 	{
-
 		// Build one line
 		word_t* la = dset->data + (s->indexA * dset->n_words);
 		word_t* lb = dset->data + (s->indexB * dset->n_words);
@@ -288,14 +287,14 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 	// Remove extra values
 	// The number of attributes may not be divisable by 64, so we could have
 	// extra values in the attr_buffer that are not necessary.
-	uint32_t my_attributes = n_words_to_process * WORD_BITS;
+	uint32_t n_lines = n_words_to_process * WORD_BITS;
 	if ((start + n_words_to_process) * WORD_BITS > dset->n_attributes)
 	{
-		my_attributes = dset->n_attributes - start * WORD_BITS;
+		n_lines = dset->n_attributes - start * WORD_BITS;
 	}
 
 	mpi_write_attribute_totals(hdf5_dset, attr_buffer, start * WORD_BITS,
-							   my_attributes, dset->n_attributes);
+							   n_lines, dset->n_attributes);
 
 	free(attr_buffer);
 
