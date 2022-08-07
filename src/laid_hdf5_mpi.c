@@ -173,7 +173,7 @@ int main(int argc, char** argv)
 
 		// All table pointers should now point to copy on noderank 0
 		// Setup dataset
-		//MPI_Win_fence(0, win_shared_dset);
+		// MPI_Win_fence(0, win_shared_dset);
 		MPI_Barrier(node_comm);
 
 		if (node_rank == 0)
@@ -245,7 +245,7 @@ int main(int argc, char** argv)
 		}
 
 		// End setup dataset
-		//MPI_Win_fence(0, win_shared_dset);
+		// MPI_Win_fence(0, win_shared_dset);
 		MPI_Barrier(node_comm);
 
 		// Only rank 0 on a node actually allocates memory
@@ -288,7 +288,7 @@ int main(int argc, char** argv)
 
 		// All table pointers should now point to copy on noderank 0
 		// Setup steps
-		//MPI_Win_fence(0, win_shared_steps);
+		// MPI_Win_fence(0, win_shared_steps);
 		MPI_Barrier(node_comm);
 
 		if (node_rank == 0)
@@ -332,7 +332,7 @@ int main(int argc, char** argv)
 		}
 
 		// end setup steps
-		//MPI_Win_fence(0, win_shared_steps);
+		// MPI_Win_fence(0, win_shared_steps);
 		MPI_Barrier(comm);
 
 		if (rank == 0)
@@ -369,15 +369,15 @@ int main(int argc, char** argv)
 			dm.s_size			   = BLOCK_SIZE(rank, size, dm.n_matrix_lines);
 		}
 
-//		for (int r = 0; r < size; r++)
-//		{
-//			if (r == rank)
-//			{
-//				printf("[%d] o:%d, s:%d, n:%d\n", rank, dm.s_offset, dm.s_size,
-//					   dm.n_matrix_lines);
-//			}
-//			sleep(1);
-//		}
+		//		for (int r = 0; r < size; r++)
+		//		{
+		//			if (r == rank)
+		//			{
+		//				printf("[%d] o:%d, s:%d, n:%d\n", rank, dm.s_offset,
+		// dm.s_size, 					   dm.n_matrix_lines);
+		//			}
+		//			sleep(1);
+		//		}
 
 		if (rank == 0)
 		{
@@ -413,8 +413,11 @@ int main(int argc, char** argv)
 		MPI_Win_free(&win_shared_steps);
 
 		dataset.data = NULL;
+		dm.steps	 = NULL;
+
 		free_dataset(&dataset);
 		hdf5_close_dataset(&hdf5_dset);
+		free_dm(&dm);
 	}
 	//	//
 	//	//	cover_t cover;

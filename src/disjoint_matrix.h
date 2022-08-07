@@ -29,12 +29,17 @@ uint32_t get_dm_n_lines(const dataset_t* dataset);
  * the first word from every line from the line disjoint matrix
  */
 oknok_t generate_dm_column(const dataset_t* dset, const dm_t* dm,
-								  const int column, word_t* buffer);
+						   const int column, word_t* buffer);
 
 /**
  * Writes the matrix atributes in the dataset
  */
 herr_t write_dm_attributes(const hid_t dataset_id, const uint32_t n_attributes,
 						   const uint32_t n_matrix_lines);
+
+/**
+ * Free resources
+ */
+void free_dm(dm_t* dm);
 
 #endif

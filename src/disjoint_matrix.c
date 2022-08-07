@@ -11,9 +11,9 @@
 #include "dataset_hdf5.h"
 #include "types/dataset_hdf5_t.h"
 #include "types/dataset_t.h"
+#include "types/dm_t.h"
 #include "types/oknok_t.h"
 #include "types/word_t.h"
-#include "types/dm_t.h"
 #include "utils/bit.h"
 #include "utils/timing.h"
 
@@ -44,7 +44,7 @@ uint32_t get_dm_n_lines(const dataset_t* dataset)
 }
 
 oknok_t generate_dm_column(const dataset_t* dset, const dm_t* dm,
-								 const int column, word_t* buffer)
+						   const int column, word_t* buffer)
 {
 	word_t* current_buffer = buffer;
 
@@ -78,4 +78,13 @@ herr_t write_dm_attributes(const hid_t dataset_id, const uint32_t n_attributes,
 							   &n_matrix_lines);
 
 	return ret;
+}
+
+void free_dm(dm_t* dm)
+{
+	dm->n_matrix_lines = 0;
+	dm->s_offset	   = 0;
+	dm->s_size		   = 0;
+	free(dm->steps);
+	dm->steps = NULL;
 }
