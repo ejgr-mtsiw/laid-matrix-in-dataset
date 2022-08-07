@@ -74,8 +74,7 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 	word_t* buffer = (word_t*) malloc(sizeof(word_t) * dset->n_words);
 	assert(buffer != NULL);
 
-	// This process will write this many lines
-	steps_t* s	   = dm->steps;
+	steps_t* s	   = dm->steps + dm->s_offset;
 	steps_t* s_end = s + dm->s_size;
 
 	// Allocate line totals buffer
@@ -87,12 +86,16 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 
 	for (; s < s_end; s++, cl++)
 	{
+
+		// Build one line
 		word_t* la = dset->data + (s->indexA * dset->n_words);
 		word_t* lb = dset->data + (s->indexB * dset->n_words);
 
 		for (uint32_t n = 0; n < dset->n_words; n++)
 		{
 			buffer[n] = la[n] ^ lb[n];
+
+			// Update line total
 			lt_buffer[cl] += __builtin_popcountl(buffer[n]);
 		}
 
@@ -152,7 +155,7 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 		+ (dm->n_matrix_lines % WORD_BITS != 0);
 
 	// Round to nearest 64 so we don't have to worry when transposing
-	uint32_t out_n_lines = roundUp(dset->n_attributes, 64);
+	uint32_t out_n_lines = roundUp(dset->n_attributes, WORD_BITS);
 
 	// CREATE OUTPUT DATASET
 	// Output dataset dimensions
@@ -217,20 +220,7 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 
 	for (uint32_t iw = start; iw < end; iw++)
 	{
-		memset(in_buffer, 0, out_n_words * WORD_BITS * sizeof(word_t));
-		word_t* current_buffer = in_buffer;
-
-		steps_t* s	   = dm->steps;
-		steps_t* s_end = s + dm->n_matrix_lines;
-
-		for (; s < s_end; s++)
-		{
-			word_t* la = dset->data + (s->indexA * dset->n_words) + iw;
-			word_t* lb = dset->data + (s->indexB * dset->n_words) + iw;
-
-			*current_buffer = *la ^ *lb;
-			current_buffer++;
-		}
+		generate_dm_column(dset, dm, iw, in_buffer);
 
 		// TRANSPOSE LINES
 		for (uint32_t ow = 0; ow < out_n_words; ow++)
@@ -356,6 +346,8 @@ oknok_t mpi_write_line_totals(const dataset_hdf5_t* hdf5_dset, const dm_t* dm,
 	hid_t memspace_id		  = H5Screate_simple(2, mem_dimensions, NULL);
 	assert(memspace_id != NOK);
 
+	// This is only needed if we're saving collectively,
+	// because all processes must participate in the operation
 	if (dm->s_size == 0)
 	{
 		// Nothing to save
