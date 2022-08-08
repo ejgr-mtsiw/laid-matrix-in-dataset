@@ -74,17 +74,29 @@ bool hdf5_file_has_dataset(const char* filename, const char* datasetname);
  */
 oknok_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t* dataset);
 
-///**
-// * Reads the value of one attribute from the dataset
-// */
+/**
+ * Reads the value of one attribute from the dataset
+ */
 oknok_t hdf5_read_attribute(hid_t dataset_id, const char* attribute,
 							hid_t datatype, void* value);
 
-///**
-// * Reads the entire dataset data from the hdf5 file
-// */
-oknok_t hdf5_read_data(hid_t dataset_id, dataset_t* dataset);
+/**
+ * Reads the entire dataset data from the hdf5 file
+ */
+oknok_t hdf5_read_dataset_data(hid_t dataset_id, word_t* data);
 
+/**
+ * Retrieves a line from the dataset
+ */
+oknok_t hdf5_read_line(const dataset_hdf5_t* dataset, const uint32_t index,
+					   const uint32_t n_words, word_t* line);
+
+/**
+ * Reads n lines from the dataset
+ */
+oknok_t hdf5_read_lines(const dataset_hdf5_t* dataset, const uint32_t index,
+						const uint32_t n_words, const uint32_t n_lines,
+						word_t* lines);
 /**
  * Writes an attribute to the dataset
  */
