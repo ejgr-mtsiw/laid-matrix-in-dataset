@@ -30,6 +30,7 @@
 #include "hdf5.h"
 #include "mpi.h"
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -197,12 +198,6 @@ int main(int argc, char** argv)
 	int node_str_len = 0;
 	MPI_Get_processor_name(node_name, &node_str_len);
 
-	// debug info
-	//		printf(
-	//			"Rank %d of %d, rank %d of %d in node <%s>, localtablesize
-	//%lu\n", 			rank, size, node_rank, node_size, node_name,
-	// dset_data_size);
-
 	word_t* dset_data		= NULL;
 	MPI_Win win_shared_dset = MPI_WIN_NULL;
 	MPI_Win_allocate_shared(dset_data_size * sizeof(word_t), sizeof(word_t),
@@ -228,8 +223,6 @@ int main(int argc, char** argv)
 		TOCK(stdout)
 	}
 	// All table pointers should now point to copy on noderank 0
-
-	// MPI_Barrier(node_comm);
 
 	// Setup dataset
 	if (node_rank == 0)
@@ -310,11 +303,6 @@ int main(int argc, char** argv)
 		dm.n_matrix_lines = get_dm_n_lines(&dataset);
 	}
 
-	// debug info
-	//		printf("Rank %d of %d, rank %d of %d in node <%s>, local_dm_size
-	//%lu\n", 			   rank, size, node_rank, node_size, node_name,
-	// n_matrix_lines);
-
 	steps_t* localsteps		 = NULL;
 	MPI_Win win_shared_steps = MPI_WIN_NULL;
 	MPI_Win_allocate_shared(dm.n_matrix_lines * sizeof(steps_t),
@@ -340,8 +328,6 @@ int main(int argc, char** argv)
 	// All table pointers should now point to copy on noderank 0
 
 	// Setup steps
-	// MPI_Barrier(node_comm);
-
 	if (node_rank == 0)
 	{
 		TICK;
@@ -373,11 +359,6 @@ int main(int argc, char** argv)
 			}
 		}
 
-		//			for (uint64_t i=0;i<n_matrix_lines;i++){
-		//				printf("[%lu]: %d ^ %d\n", i, steps[i].indexA+1,
-		// steps[i].indexB+1);
-		//			}
-
 		free(dataset.n_observations_per_class);
 		free(dataset.observations_per_class);
 
@@ -387,9 +368,6 @@ int main(int argc, char** argv)
 		fprintf(stdout, " - Finished generating matrix steps ");
 		TOCK(stdout)
 	}
-
-	// end setup steps
-	// MPI_Barrier(node_comm);
 
 	if (rank == 0)
 	{
@@ -457,6 +435,9 @@ int main(int argc, char** argv)
 	dataset.data = NULL;
 	dm.steps	 = NULL;
 
+	free_dataset(&dataset);
+	free_dm(&dm);
+
 apply_set_cover:
 	/**
 	 * All:
@@ -485,6 +466,9 @@ apply_set_cover:
 	 *   - Show solution
 	 */
 
+	// We no longer need to keep the original dataset open
+	H5Dclose(hdf5_dset.dataset_id);
+
 	if (rank == 0)
 	{
 		TICK;
@@ -495,13 +479,37 @@ apply_set_cover:
 	cover_t cover;
 	init_cover(&cover);
 
-	cover.n_attributes = dataset.n_attributes;
-	// cover.n_matrix_lines	= dm.n_matrix_lines;
-	cover.n_words_in_a_line = dataset.n_words;
+	/* open the line dataset*/
+	hid_t d_id = H5Dopen2(hdf5_dset.file_id, DM_LINE_DATA, H5P_DEFAULT);
+	assert(d_id != NOK);
 
-	cover.n_matrix_lines = dm.n_matrix_lines;
-	uint32_t n_words_in_a_column
-		= dm.n_matrix_lines / WORD_BITS + (dm.n_matrix_lines % WORD_BITS != 0);
+	dataset_hdf5_t line_dset_id;
+	line_dset_id.file_id	= hdf5_dset.file_id;
+	line_dset_id.dataset_id = d_id;
+	hdf5_get_dataset_dimensions(d_id, line_dset_id.dimensions);
+
+	/* open the column dataset*/
+	d_id = H5Dopen2(hdf5_dset.file_id, DM_COLUMN_DATA, H5P_DEFAULT);
+	assert(d_id != NOK);
+
+	dataset_hdf5_t column_dset_id;
+	column_dset_id.file_id	  = hdf5_dset.file_id;
+	column_dset_id.dataset_id = d_id;
+	hdf5_get_dataset_dimensions(d_id, column_dset_id.dimensions);
+
+	// If we skipped the matriz generation, dataset and dm are empty.
+	// So we need to read the attributes from the dataset
+	hdf5_read_attribute(line_dset_id.dataset_id, N_MATRIX_LINES_ATTR,
+						H5T_NATIVE_UINT32_g, &cover.n_matrix_lines);
+	hdf5_read_attribute(line_dset_id.dataset_id, N_ATTRIBUTES_ATTR,
+						H5T_NATIVE_UINT32_g, &cover.n_attributes);
+
+	cover.n_words_in_a_line = line_dset_id.dimensions[1];
+
+	// Each process only needs acces to some rows, we don't need the entire
+	// column (attribute data)
+	uint32_t n_words_in_a_column = cover.n_matrix_lines / WORD_BITS
+		+ (cover.n_matrix_lines % WORD_BITS != 0);
 
 	cover.column_offset_words = BLOCK_LOW(rank, size, n_words_in_a_column);
 	cover.column_n_words	  = BLOCK_SIZE(rank, size, n_words_in_a_column);
@@ -529,24 +537,6 @@ apply_set_cover:
 		read_initial_attribute_totals(hdf5_dset.file_id,
 									  global_attribute_totals);
 	}
-
-	/* open the line dataset*/
-	hid_t d_id = H5Dopen2(hdf5_dset.file_id, DM_LINE_DATA, H5P_DEFAULT);
-	// assert(d_id != NOK);
-
-	dataset_hdf5_t line_dset_id;
-	line_dset_id.file_id	= hdf5_dset.file_id;
-	line_dset_id.dataset_id = d_id;
-	hdf5_get_dataset_dimensions(d_id, line_dset_id.dimensions);
-
-	/* open the column dataset*/
-	d_id = H5Dopen2(hdf5_dset.file_id, DM_COLUMN_DATA, H5P_DEFAULT);
-	// assert(d_id != NOK);
-
-	dataset_hdf5_t column_dset_id;
-	column_dset_id.file_id	  = hdf5_dset.file_id;
-	column_dset_id.dataset_id = d_id;
-	hdf5_get_dataset_dimensions(d_id, column_dset_id.dimensions);
 
 	while (true)
 	{
@@ -616,14 +606,9 @@ show_solution:
 	// wait for everyone
 	MPI_Barrier(comm);
 
+	// Close dataset files
 	H5Dclose(line_dset_id.dataset_id);
 	H5Dclose(column_dset_id.dataset_id);
-
-	free_dataset(&dataset);
-	free_dm(&dm);
-
-	// Close dataset files
-	H5Dclose(hdf5_dset.dataset_id);
 	H5Fclose(hdf5_dset.file_id);
 
 	if (rank == 0)
