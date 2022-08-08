@@ -22,7 +22,7 @@
 
 #define TOCK(stream)                                                           \
 	clock_gettime(CLOCK_MONOTONIC_RAW, &tock);                                 \
-	fprintf(stream, "[%0.3fs]\n",                                              \
+	fprintf(stream, "[%0.6fs]\n",                                              \
 			(tock.tv_nsec - tick.tv_nsec) / 1000000000.0F                      \
 				+ (tock.tv_sec - tick.tv_sec));
 
