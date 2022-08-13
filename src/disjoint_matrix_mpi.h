@@ -17,6 +17,17 @@
 #include <stdint.h>
 
 /**
+ * Number of lines to buffer before output
+ * Only used in the line dataset, because we already write WORD_BITS columns at
+ * a time in the column dataset
+ */
+#define N_LINES_OUT 42
+
+
+oknok_t write_n_lines(hid_t dset_id, uint32_t start, uint8_t n_lines_out,
+					  uint32_t n_words, word_t* buffer);
+
+/**
  * Creates the dataset containing the disjoint matrix with attributes as columns
  */
 oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
