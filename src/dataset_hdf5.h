@@ -15,6 +15,7 @@
 
 #include "hdf5.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 
 /**
