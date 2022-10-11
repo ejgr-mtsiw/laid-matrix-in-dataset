@@ -132,7 +132,7 @@ int main(int argc, char** argv)
 	MPI_Comm_size(node_comm, &node_size);
 	MPI_Comm_rank(node_comm, &node_rank);
 
-	time_t main_tick, main_tock;
+	time_t main_tick = 0, main_tock = 0;
 	if (rank == 0)
 	{
 		// Timing for the full operation
