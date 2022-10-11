@@ -58,3 +58,4 @@ bin/
 .project
 .cproject
 .settings/
+/Makefile

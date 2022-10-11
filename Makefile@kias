@@ -1,12 +1,11 @@
 CC				:= mpicc
-CPPFLAGS		:= -Wall -Wextra -Werror -pedantic-errors -std=gnu11
+CPPFLAGS		:= -Wall -Wextra -Werror -pedantic-errors -std=c99
 LDFLAGS			:= -L/usr/lib -L/usr/local/lib -lm -lhdf5 -lmpi
 BUILD			:= ./bin
 OBJ_DIR			:= $(BUILD)/objects
 APP_DIR			:= $(BUILD)
 TARGET			:= laid-hdf5-mpi
-INCLUDE			:= -I./src -I/usr/local/include -I /usr/include -I/usr/include/openmpi-x86_64
-#SRC				:= $(wildcard src/*.c)
+INCLUDE			:= -I./src -I/usr/local/include -I /usr/include 
 SRC_DIRS		:= ./src
 SRC				:= $(shell find $(SRC_DIRS) -name *.c)
 

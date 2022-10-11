@@ -98,7 +98,7 @@ int main(int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 
-	SETUP_TIMING
+	SETUP_TIMING;
 
 	/*
 	 * Initialize MPI
@@ -132,11 +132,11 @@ int main(int argc, char** argv)
 	MPI_Comm_size(node_comm, &node_size);
 	MPI_Comm_rank(node_comm, &node_rank);
 
-	struct timespec main_tick, main_tock;
+	time_t main_tick, main_tock;
 	if (rank == 0)
 	{
 		// Timing for the full operation
-		clock_gettime(CLOCK_MONOTONIC_RAW, &main_tick);
+		main_tick = time(0);
 	}
 
 	/**
@@ -220,7 +220,7 @@ int main(int argc, char** argv)
 	if (rank == 0)
 	{
 		fprintf(stdout, "- Finished MPI RMA Init ");
-		TOCK(stdout)
+		TOCK(stdout);
 	}
 	// All table pointers should now point to copy on noderank 0
 
@@ -241,7 +241,7 @@ int main(int argc, char** argv)
 
 		fprintf(stdout, " - Finished loading dataset data ");
 
-		TOCK(stdout)
+		TOCK(stdout);
 		TICK;
 
 		// Sort dataset
@@ -254,7 +254,7 @@ int main(int argc, char** argv)
 			   &dataset.n_words);
 
 		fprintf(stdout, " - Sorted dataset");
-		TOCK(stdout)
+		TOCK(stdout);
 		TICK;
 
 		// Remove duplicates
@@ -263,7 +263,7 @@ int main(int argc, char** argv)
 		unsigned int duplicates = remove_duplicates(&dataset);
 
 		fprintf(stdout, " - %d duplicate(s) removed ", duplicates);
-		TOCK(stdout)
+		TOCK(stdout);
 		TICK;
 
 		// Fill class arrays
@@ -274,7 +274,7 @@ int main(int argc, char** argv)
 			return EXIT_FAILURE;
 		}
 
-		TOCK(stdout)
+		TOCK(stdout);
 
 		for (unsigned int i = 0; i < dataset.n_classes; i++)
 		{
@@ -291,7 +291,7 @@ int main(int argc, char** argv)
 
 		fprintf(stdout, " - Max JNSQ: %d [%d bits] ", max_jnsq,
 				dataset.n_bits_for_jnsqs);
-		TOCK(stdout)
+		TOCK(stdout);
 	}
 
 	// End setup dataset
@@ -366,7 +366,7 @@ int main(int argc, char** argv)
 		dataset.observations_per_class	 = NULL;
 
 		fprintf(stdout, " - Finished generating matrix steps ");
-		TOCK(stdout)
+		TOCK(stdout);
 	}
 
 	if (rank == 0)
@@ -413,7 +413,7 @@ int main(int argc, char** argv)
 	if (rank == 0)
 	{
 		fprintf(stdout, " - Finished building disjoint matrix [1/2] ");
-		TOCK(stdout)
+		TOCK(stdout);
 		TICK;
 	}
 
@@ -426,7 +426,7 @@ int main(int argc, char** argv)
 	if (rank == 0)
 	{
 		fprintf(stdout, " - Finished building disjoint matrix [2/2] ");
-		TOCK(stdout)
+		TOCK(stdout);
 	}
 
 	MPI_Win_free(&win_shared_dset);
@@ -598,7 +598,7 @@ show_solution:
 	if (rank == 0)
 	{
 		printf(" - Finished applying set covering algorithm ");
-		TOCK(stdout)
+		TOCK(stdout);
 
 		print_solution(stdout, &cover);
 	}
@@ -615,10 +615,8 @@ show_solution:
 	{
 		fprintf(stdout, "All done! ");
 
-		clock_gettime(CLOCK_MONOTONIC_RAW, &main_tock);
-		fprintf(stdout, "[%0.3fs]\n",
-				(main_tock.tv_nsec - main_tick.tv_nsec) / 1000000000.0
-					+ (main_tock.tv_sec - main_tick.tv_sec));
+		main_tock = time(0);
+		fprintf(stdout, "[%lds]\n", main_tock - main_tick);
 	}
 
 	/* shut down MPI */

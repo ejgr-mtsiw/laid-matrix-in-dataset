@@ -23,12 +23,12 @@ typedef struct clargs_t
 	/**
 	 * The name of the dataset file
 	 */
-	char* filename;
+	const char* filename;
 
 	/**
 	 * The dataset identifier
 	 */
-	char* datasetname;
+	const char* datasetname;
 } clargs_t;
 
 /**

@@ -8,51 +8,68 @@
 
 #include "utils/clargs.h"
 
+#include "utils/cargs.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 int read_args(int argc, char** argv, clargs_t* args)
 {
-	int c  = 0;
-	opterr = 0;
+	char identifier;
+	const char* value;
+	cag_option_context context;
 
-	// Set defaults
-	args->filename	  = NULL;
-	args->datasetname = NULL;
+	/**
+	 * This is the main configuration of all options available.
+	 */
+	cag_option options[] = { { .identifier	   = 'f',
+							   .access_letters = "f",
+							   .access_name	   = NULL,
+							   .value_name	   = "filename",
+							   .description	   = "HDF5 dataset filename" },
 
-	while ((c = getopt(argc, argv, "f:d:")) != -1)
+							 { .identifier	   = 'd',
+							   .access_letters = "d",
+							   .access_name	   = NULL,
+							   .value_name	   = "dataset",
+							   .description	   = "Dataset identifier" },
+
+							 { .identifier	   = 'h',
+							   .access_letters = "h",
+							   .access_name	   = "help",
+							   .description	   = "Shows the command help"
+
+							 } };
+
+	/**
+	 * Now we just prepare the context and iterate over all options. Simple!
+	 */
+	cag_option_prepare(&context, options, CAG_ARRAY_SIZE(options), argc, argv);
+	while (cag_option_fetch(&context))
 	{
-		switch (c)
+		identifier = cag_option_get(&context);
+		switch (identifier)
 		{
 			case 'f':
-				args->filename = optarg;
+				value		   = cag_option_get_value(&context);
+				args->filename = value;
 				break;
 			case 'd':
-				args->datasetname = optarg;
+				value			  = cag_option_get_value(&context);
+				args->datasetname = value;
 				break;
-			case '?':
-				if (optopt == 'f')
-				{
-					fprintf(stderr, "Must set output filename (-f).\n");
-					return READ_CL_ARGS_NOK;
-				}
-
-				if (optopt == 'd')
-				{
-					fprintf(stderr, "Must set dataset identifier (-d).\n");
-					return READ_CL_ARGS_NOK;
-				}
-				break;
-
-			default:
-				abort();
+			case 'h':
+				printf("Usage: %s [OPTION]...\n", argv[0]);
+				cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
+				return READ_CL_ARGS_NOK;
 		}
 	}
 
 	if (args->filename == NULL || args->datasetname == NULL)
 	{
-		fprintf(stdout, "Usage:\n %s -f <filename> -d <dataset>\n", argv[0]);
+		printf("Usage: %s [OPTION]...\n", argv[0]);
+		cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
 		return READ_CL_ARGS_NOK;
 	}
 

@@ -11,23 +11,10 @@
 
 #include <time.h>
 
-// FreeBSD doesn't have CLOCK_MONOTONIC_RAW
-#ifndef CLOCK_MONOTONIC_RAW
-#define CLOCK_MONOTONIC_RAW CLOCK_MONOTONIC
-#endif
+#define SETUP_TIMING time_t tick = 0, tock = 0;
 
-#define SETUP_TIMING struct timespec tick, tock;
+#define TICK tick = time(0); // clock_gettime(CLOCK_MONOTONIC_RAW, &tick);
 
-#define TICK clock_gettime(CLOCK_MONOTONIC_RAW, &tick);
-
-#define TOCK(stream)                                                           \
-	clock_gettime(CLOCK_MONOTONIC_RAW, &tock);                                 \
-	fprintf(stream, "[%0.6fs]\n",                                              \
-			(tock.tv_nsec - tick.tv_nsec) / 1000000000.0F                      \
-				+ (tock.tv_sec - tick.tv_sec));
-
-//#define SETUP_TIMING
-//#define TICK
-//#define TOCK(stream) fprintf(stream, "\n");
+#define TOCK(stream) tock=time(0); fprintf(stream, "[%lds]\n", tock - tick);
 
 #endif // UTIL_TIMING_H__
