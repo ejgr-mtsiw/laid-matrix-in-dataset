@@ -523,6 +523,11 @@ apply_set_cover:
 	uint32_t* global_attribute_totals = NULL;
 	uint32_t* attribute_totals_buffer = NULL;
 
+	/**
+	 * Number of uncovered lines. Only root uses this.
+	 */
+	uint32_t n_uncovered_lines = 0;
+
 	if (rank == 0)
 	{
 		global_attribute_totals
@@ -536,6 +541,9 @@ apply_set_cover:
 
 		read_initial_attribute_totals(hdf5_dset.file_id,
 									  global_attribute_totals);
+
+		// No line is covered so far
+		n_uncovered_lines = cover.n_matrix_lines;
 	}
 
 	while (true)
@@ -546,6 +554,19 @@ apply_set_cover:
 		{
 			best_attribute = get_best_attribute_index(global_attribute_totals,
 													  cover.n_attributes);
+
+			printf(" - Selected attribute #%ld\n", best_attribute);
+
+			mark_attribute_as_selected(&cover, best_attribute);
+
+			// Update number of lines remaining
+			n_uncovered_lines -= global_attribute_totals[best_attribute];
+
+			// If we covered all of them, we can leav earlier
+			if (n_uncovered_lines == 0)
+			{
+				best_attribute = -1;
+			}
 		}
 
 		MPI_Bcast(&best_attribute, 1, MPI_INT64_T, 0, comm);
@@ -555,12 +576,8 @@ apply_set_cover:
 			goto show_solution;
 		}
 
-		if (rank == 0)
-		{
-			printf(" - Selected attribute #%ld\n", best_attribute);
-			mark_attribute_as_selected(&cover, best_attribute);
-		}
-
+		// Even if this process has no lines it needs to participate in
+		// the MPI_Reduce
 		if (cover.column_n_words == 0)
 		{
 			// printf("[%d] NOTHING TO DO!\n", rank);
