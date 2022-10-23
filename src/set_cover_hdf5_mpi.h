@@ -10,6 +10,8 @@
 #ifndef SET_COVER_HDF5_MPI_H
 #define SET_COVER_HDF5_MPI_H
 
+#include "types/cover_t.h"
+#include "types/dataset_hdf5_t.h"
 #include "types/oknok_t.h"
 #include "types/word_t.h"
 

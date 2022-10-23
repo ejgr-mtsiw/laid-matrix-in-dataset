@@ -6,10 +6,12 @@
  ============================================================================
  */
 
-#include "set_cover.h"
+#include "set_cover_hdf5_mpi.h"
 
 #include "dataset_hdf5.h"
 #include "set_cover.h"
+#include "types/cover_t.h"
+#include "types/dataset_hdf5_t.h"
 #include "types/dm_t.h"
 #include "types/oknok_t.h"
 #include "types/word_t.h"
