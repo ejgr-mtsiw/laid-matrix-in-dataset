@@ -73,7 +73,8 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 	assert(err != NOK);
 
 	// Allocate buffer
-	word_t* buffer = (word_t*) malloc(N_LINES_OUT * dset->n_words * sizeof(word_t));
+	word_t* buffer
+		= (word_t*) malloc(N_LINES_OUT * dset->n_words * sizeof(word_t));
 	assert(buffer != NULL);
 
 	// steps_t*my_steps=(steps_t*)malloc(dm->s_size*sizeof(steps_t));
@@ -93,8 +94,6 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 	// Current line index on line totals buffer
 	uint32_t clt = 0;
 
-
-
 	// buffer end
 	// word_t*be=buffer+32*dset->n_words;
 
@@ -103,9 +102,10 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 		uint8_t n_lines_out = 0;
 
 		// Current buffer line
-			word_t* bl = buffer;
+		word_t* bl = buffer;
 
-		for (n_lines_out = 0; n_lines_out < N_LINES_OUT && s < s_end; n_lines_out++, s++)
+		for (n_lines_out = 0; n_lines_out < N_LINES_OUT && s < s_end;
+			 n_lines_out++, s++)
 		{
 			// Build one line
 			word_t* la = dset->data + (s->indexA * dset->n_words);
@@ -126,49 +126,11 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 		write_n_lines(dset_id, offset, n_lines_out, dset->n_words, buffer);
 
 		offset += n_lines_out;
-
-
-		//		// Setup dataspace
-		//		// If writing to a portion of a dataset in a loop, be sure
-		//		// to close the dataspace with each iteration, as this
-		//		// can cause a large temporary "memory leak".
-		//		// "Achieving High Performance I/O with HDF5"
-		//		filespace_id = H5Dget_space(dset_id);
-		//		assert(filespace_id != NOK);
-		//
-		//		// We will write one line at a time
-		//		hsize_t count[2]  = { n_lines_out, dset->n_words };
-		//		hsize_t offset[2] = { dm->s_offset + cl, 0 };
-		//
-		//		// Select hyperslab on file dataset
-		//		err = H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, offset,
-		//NULL, 								  count, NULL); 		assert(err != NOK);
-		//
-		//		hsize_t mem_dimensions[2] = { 1, dset->n_words };
-		//		// Create a memory dataspace to indicate the size of our
-		//buffer/chunk 		hid_t memspace_id = H5Screate_simple(2, mem_dimensions,
-		//NULL); 		assert(memspace_id != NOK);
-		//
-		//		// set up the collective transfer properties list
-		//		hid_t xfer_plist = H5Pcreate(H5P_DATASET_XFER);
-		//		assert(xfer_plist != NOK);
-		//
-		//		//	err = H5Pset_dxpl_mpio(xfer_plist, H5FD_MPIO_COLLECTIVE);
-		//		//	assert(err != NOK);
-		//
-		//		// Write buffer to dataset
-		//		err = H5Dwrite(dset_id, H5T_NATIVE_ULONG, memspace_id,
-		//filespace_id, 					   xfer_plist, buffer); 		assert(err != NOK);
-		//
-		//		H5Pclose(xfer_plist);
-		//		H5Sclose(memspace_id);
-		//		H5Sclose(filespace_id);
 	}
 
 	H5Dclose(dset_id);
 
 	free(buffer);
-	// free(my_steps);
 
 	// Save line totals dataset
 	mpi_write_line_totals(hdf5_dset, dm, lt_buffer);

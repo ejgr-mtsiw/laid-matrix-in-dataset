@@ -201,7 +201,7 @@ int main(int argc, char** argv)
 		/**
 		 * We don't have to build the disjoint matrix!
 		 */
-		ROOT_SAYS("Disjoint matrix dataset found!.\n\n");
+		ROOT_SAYS("Disjoint matrix dataset found.\n\n");
 
 		goto apply_set_cover;
 	}
@@ -209,7 +209,7 @@ int main(int argc, char** argv)
 	/**
 	 * We have to build the disjoint matrices.
 	 */
-	ROOT_SAYS("Disjoint matrix dataset not found!.\n\n");
+	ROOT_SAYS("Disjoint matrix dataset not found.\n\n");
 	ROOT_SAYS("Initializing MPI RMA: ");
 	TICK;
 
@@ -417,16 +417,7 @@ int main(int argc, char** argv)
 
 		TOCK;
 		ROOT_SHOWS("  %d matrix steps generated\n", dm.n_matrix_lines);
-
-		double matrix_size
-			= ((double) dm.n_matrix_lines
-			   * (dataset.n_attributes + dataset.n_bits_for_jnsqs))
-			/ (1024 * 1024 * 8);
-		ROOT_SHOWS("  Estimated disjoint matrix size: %3.2fMB\n", matrix_size);
 	}
-
-	ROOT_SAYS("Sharing dataset attributes: ");
-	TICK;
 
 	uint64_t toshare[4];
 	if (node_rank == 0)
@@ -452,8 +443,18 @@ int main(int argc, char** argv)
 	dm.s_offset = BLOCK_LOW(rank, size, dm.n_matrix_lines);
 	dm.s_size	= BLOCK_SIZE(rank, size, dm.n_matrix_lines);
 
-	TOCK;
-	ROOT_SAYS("Building disjoint matrix [1/2]: ");
+	ROOT_SAYS("Building disjoint matrix:\n");
+
+	if (rank == ROOT_RANK)
+	{
+		double matrix_size
+			= ((double) dm.n_matrix_lines
+			   * (dataset.n_attributes + dataset.n_bits_for_jnsqs))
+			/ (1024 * 1024 * 8);
+		ROOT_SHOWS("  Estimated disjoint matrix size: %3.2fMB\n", matrix_size);
+	}
+
+	ROOT_SAYS("  Line dataset done: ");
 	TICK;
 
 	// MPI_Barrier(node_comm);
@@ -464,7 +465,7 @@ int main(int argc, char** argv)
 	mpi_create_line_dataset(&hdf5_dset, &dataset, &dm);
 
 	TOCK;
-	ROOT_SAYS("Building disjoint matrix [2/2]: ");
+	ROOT_SAYS("  Column dataset done: ");
 	TICK;
 
 	// MPI_Barrier(comm);
@@ -692,23 +693,9 @@ show_solution:
 
 	if (rank == ROOT_RANK)
 	{
-		fprintf(stdout, "Solution: { ");
-
-		uint32_t current_attribute = 0;
-		for (uint32_t w = 0; w < dataset.n_words; w++)
-		{
-			for (int8_t bit = WORD_BITS - 1; bit >= 0;
-				 bit--, current_attribute++)
-			{
-				if (BIT_CHECK(cover.selected_attributes[w], bit))
-				{
-					fprintf(stdout, "%d ", current_attribute);
-				}
-			}
-		}
-
-		fprintf(stdout, "}\n");
+		print_solution(stdout, &cover);
 		fprintf(stdout, "All done! ");
+
 		main_tock = time(0);
 		fprintf(stdout, "[%lds]\n", main_tock - main_tick);
 
