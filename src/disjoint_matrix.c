@@ -26,7 +26,6 @@
 
 uint32_t get_dm_n_lines(const dataset_t* dataset)
 {
-	// Calculate number of lines for the matrix
 	uint32_t n = 0;
 
 	uint32_t n_classes	  = dataset->n_classes;

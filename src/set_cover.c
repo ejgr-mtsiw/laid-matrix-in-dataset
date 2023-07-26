@@ -22,11 +22,11 @@
 
 oknok_t read_initial_attribute_totals(hid_t file_id, uint32_t* attribute_totals)
 {
-	// open dataset
+	// Open dataset
 	hid_t dset_id = H5Dopen(file_id, DM_ATTRIBUTE_TOTALS, H5P_DEFAULT);
 	assert(dset_id != NOK);
 
-	// read attribute totals
+	// Read attribute totals
 	herr_t status = H5Dread(dset_id, H5T_NATIVE_UINT, H5S_ALL, H5S_ALL,
 							H5P_DEFAULT, attribute_totals);
 	assert(status != NOK);
@@ -77,9 +77,7 @@ oknok_t remove_line_contribution(cover_t* cover, const word_t* line)
 	 */
 	uint8_t n_last_word = WORD_BITS - (cover->n_attributes % WORD_BITS);
 
-	/**
-	 * Process full words
-	 */
+	// Process full words
 	for (c_word = 0; c_word < n_full_words; c_word++)
 	{
 		for (int8_t bit = WORD_BITS - 1; bit >= 0; bit--, c_attribute++)
@@ -89,9 +87,7 @@ oknok_t remove_line_contribution(cover_t* cover, const word_t* line)
 		}
 	}
 
-	/**
-	 * Process last word
-	 */
+	// Process last word
 	for (int8_t bit = WORD_BITS - 1; bit >= n_last_word; bit--, c_attribute++)
 	{
 		cover->attribute_totals[c_attribute] -= BIT_CHECK(line[c_word], bit);
@@ -122,9 +118,7 @@ oknok_t add_line_contribution(cover_t* cover, const word_t* line)
 	 */
 	uint8_t n_last_word = WORD_BITS - (cover->n_attributes % WORD_BITS);
 
-	/**
-	 * Process full words
-	 */
+	// Process full words
 	for (c_word = 0; c_word < n_full_words; c_word++)
 	{
 		for (int8_t bit = WORD_BITS - 1; bit >= 0; bit--, c_attribute++)
@@ -134,9 +128,7 @@ oknok_t add_line_contribution(cover_t* cover, const word_t* line)
 		}
 	}
 
-	/**
-	 * Process last word
-	 */
+	// Process last word
 	for (int8_t bit = WORD_BITS - 1; bit >= n_last_word; bit--, c_attribute++)
 	{
 		cover->attribute_totals[c_attribute] += BIT_CHECK(line[c_word], bit);

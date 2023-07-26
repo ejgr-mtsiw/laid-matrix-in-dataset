@@ -18,12 +18,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-/**
- * Initializes a dataset structure
- */
 void init_dataset(dataset_t* dataset)
 {
-	// Store data
 	dataset->data					  = NULL;
 	dataset->n_observations_per_class = NULL;
 	dataset->observations_per_class	  = NULL;
@@ -43,7 +39,7 @@ uint32_t get_class(const word_t* line, const uint32_t n_attributes,
 
 	if (n_bits_for_class == 1 || (remaining + n_bits_for_class <= WORD_BITS))
 	{
-		// All bits on same word
+		// All class bits are on the same word
 
 		// Class starts here
 		uint8_t at = (uint8_t) (WORD_BITS - remaining - n_bits_for_class);
@@ -53,15 +49,16 @@ uint32_t get_class(const word_t* line, const uint32_t n_attributes,
 
 	// Class bits are split between 2 words
 
-	// n bits on penultimate word
+	// Number of class bits on penultimate word
 	uint8_t n_bits_p = WORD_BITS - remaining;
 
-	// n bits on last word
+	// Number of class bits on last word
 	uint8_t n_bits_l = n_bits_for_class - n_bits_p;
 
-	// bits on penultimate word
+	// Class bits from penultimate word
 	uint32_t high_b = (uint32_t) get_bits(line[n_words - 2], 0, n_bits_p);
-	// bits on last word
+
+	// Class bits from last word
 	uint32_t low_b = (uint32_t) get_bits(line[n_words - 1],
 										 WORD_BITS - n_bits_l, n_bits_l);
 
@@ -69,13 +66,10 @@ uint32_t get_class(const word_t* line, const uint32_t n_attributes,
 	high_b <<= n_bits_l;
 	high_b |= low_b;
 
+	// Return class
 	return high_b;
 }
 
-/**
- * Compares two lines of the dataset
- * Used to sort the dataset
- */
 int compare_lines_extra(const void* a, const void* b, void* n_words)
 {
 	const word_t* ula = (const word_t*) a;
@@ -104,23 +98,22 @@ int compare_lines_extra(const void* a, const void* b, void* n_words)
 	return 0;
 }
 
-/**
- * Checks if the lines have the same attributes
- */
-bool has_same_attributes(const word_t* a, const word_t* b,
+bool has_same_attributes(const word_t* line_a, const word_t* line_b,
 						 const uint32_t n_attributes)
 {
-	// How many words for attributes?
-	uint32_t n_words = (uint32_t) (n_attributes / WORD_BITS)
-		+ (n_attributes % WORD_BITS != 0);
+	// How many full words are used for attributes?
+	uint32_t n_words = (uint32_t) (n_attributes / WORD_BITS);
 
 	// How many attributes remain on last word
 	uint8_t remaining = n_attributes % WORD_BITS;
 
+	// Current word
+	uint32_t c_word = 0;
+
 	// Check full words
-	for (uint32_t i = 0; i < n_words - !!remaining; i++)
+	for (c_word = 0; c_word < n_words; c_word++)
 	{
-		if (a[i] != b[i])
+		if (line_a[c_word] != line_b[c_word])
 		{
 			return false;
 		}
@@ -128,12 +121,12 @@ bool has_same_attributes(const word_t* a, const word_t* b,
 
 	if (remaining == 0)
 	{
-		// Nothing more to check
+		// Attributes only use full words. Nothing more to check
 		return true;
 	}
 
 	// We need to check last word
-	word_t last_word = get_bits((a[n_words - 1] ^ b[n_words - 1]),
+	word_t last_word = get_bits((line_a[c_word] ^ line_b[c_word]),
 								WORD_BITS - remaining, remaining);
 
 	return (last_word == 0);
@@ -162,16 +155,11 @@ uint32_t remove_duplicates(dataset_t* dataset)
 		}
 	}
 
-	// Update number of observations
+	// Update number of observations, so the code ignores the remaining lines
 	dataset->n_observations = n_uniques;
-	return n_obs - n_uniques;
+	return (n_obs - n_uniques);
 }
 
-/**
- * Fill the arrays with the number os items per class and also a matrix with
- * references to the lines that belong to each class to simplify the
- * calculation of the disjoint matrix
- */
 oknok_t fill_class_arrays(dataset_t* dataset)
 {
 	// Number of classes
@@ -189,9 +177,7 @@ oknok_t fill_class_arrays(dataset_t* dataset)
 	// Number of bits needed to store class
 	uint8_t n_bits_for_class = dataset->n_bits_for_class;
 
-	/**
-	 * Array that stores the number of observations for each class
-	 */
+	// Array that stores the number of observations for each class
 	uint32_t* n_class_obs = (uint32_t*) calloc(nc, sizeof(uint32_t));
 	if (n_class_obs == NULL)
 	{
@@ -199,9 +185,7 @@ oknok_t fill_class_arrays(dataset_t* dataset)
 		return NOK;
 	}
 
-	/**
-	 * Matrix that stores the list of observations per class
-	 */
+	// Matrix that stores the list of observations per class
 	uint32_t* class_obs = (uint32_t*) calloc(nc * n_obs, sizeof(uint32_t*));
 	if (class_obs == NULL)
 	{

@@ -23,6 +23,9 @@
  */
 #define N_LINES_OUT 42
 
+/**
+ * Writes n_lines_out to the dataset
+ */
 oknok_t write_n_lines(hid_t dset_id, uint32_t start, uint8_t n_lines_out,
 					  uint32_t n_words, word_t* buffer);
 

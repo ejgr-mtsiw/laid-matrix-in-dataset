@@ -24,23 +24,23 @@ oknok_t mpi_hdf5_open_dataset(const char* filename, const char* datasetname,
 							  const MPI_Comm comm, const MPI_Info info,
 							  dataset_hdf5_t* dataset)
 {
-	/* setup file access template */
+	// Setup file access template
 	hid_t acc_tpl = H5Pcreate(H5P_FILE_ACCESS);
 	assert(acc_tpl != NOK);
 
-	/* set Parallel access with communicator */
+	// Set Parallel access with communicator
 	herr_t ret = H5Pset_fapl_mpio(acc_tpl, comm, info);
 	assert(ret != NOK);
 
-	/* open the file collectively */
+	// Open the file collectively
 	hid_t f_id = H5Fopen(filename, H5F_ACC_RDWR, acc_tpl);
 	assert(f_id != NOK);
 
-	/* Release file-access template */
+	// Release file-access template
 	ret = H5Pclose(acc_tpl);
 	assert(ret != NOK);
 
-	/* open the dataset collectively */
+	// Open the dataset collectively
 	hid_t dset_id = H5Dopen2(f_id, datasetname, H5P_DEFAULT);
 	assert(dset_id != NOK);
 

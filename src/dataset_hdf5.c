@@ -55,8 +55,8 @@ oknok_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t* dataset)
 		return NOK;
 	}
 
-	uint32_t n_observations = 0;
 	// Number of observations (lines) in the dataset
+	uint32_t n_observations = 0;
 	hdf5_read_attribute(dataset_id, N_OBSERVATIONS_ATTR, H5T_NATIVE_UINT,
 						&n_observations);
 
@@ -66,8 +66,8 @@ oknok_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t* dataset)
 		return NOK;
 	}
 
-	uint32_t n_attributes = 0;
 	// Number of attributes in the dataset
+	uint32_t n_attributes = 0;
 	hdf5_read_attribute(dataset_id, N_ATTRIBUTES_ATTR, H5T_NATIVE_UINT,
 						&n_attributes);
 
@@ -118,7 +118,7 @@ oknok_t hdf5_read_attribute(hid_t dataset_id, const char* attribute,
 		return NOK;
 	}
 
-	// read the attribute value
+	// Read the attribute value
 	status = H5Aread(attr, datatype, value);
 	if (status < 0)
 	{
@@ -126,7 +126,7 @@ oknok_t hdf5_read_attribute(hid_t dataset_id, const char* attribute,
 		return NOK;
 	}
 
-	// close the attribute
+	// Close the attribute
 	status = H5Aclose(attr);
 	if (status < 0)
 	{
@@ -166,6 +166,7 @@ oknok_t hdf5_read_lines(const dataset_hdf5_t* dataset, const uint32_t index,
 {
 	// Setup offset
 	hsize_t offset[2] = { index, 0 };
+
 	// Setup count
 	hsize_t count[2] = { n_lines, n_words };
 

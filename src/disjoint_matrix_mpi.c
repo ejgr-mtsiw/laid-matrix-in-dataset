@@ -19,6 +19,7 @@
 #include "utils/bit.h"
 #include "utils/block.h"
 #include "utils/math.h"
+#include "utils/ranks.h"
 
 #include "hdf5.h"
 
@@ -41,20 +42,9 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 	hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
 	assert(dcpl_id != NOK);
 
-	// H5Pset_layout(dcpl_id, H5D_CHUNKED);
-
-	// The choice of the chunk size affects performance!
-	// for now we will choose one line
-	// hsize_t chunk_dimensions[2] = { 1, n_words };
-
-	// H5Pset_chunk(dcpl_id, 2, chunk_dimensions);
-
 	// Create a dataset access property list
 	hid_t dapl_id = H5Pcreate(H5P_DATASET_ACCESS);
 	assert(dapl_id != NOK);
-
-	// H5Pset_chunk_cache(dapl_id, H5D_CHUNK_CACHE_NSLOTS_DEFAULT,
-	// 1000*n_words*8, 1);
 
 	// Create the dataset collectively
 	hid_t dset_id
@@ -66,25 +56,22 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 	H5Pclose(dcpl_id);
 	H5Sclose(filespace_id);
 
-	//! TODO: Only one process should write this! Can/should be moved outside of
-	//! this function
+	// Write dataset attributes
 	herr_t err
 		= write_dm_attributes(dset_id, dset->n_attributes, dm->n_matrix_lines);
 	assert(err != NOK);
 
-	// Allocate buffer
+	// Allocate output buffer
 	word_t* buffer
 		= (word_t*) malloc(N_LINES_OUT * dset->n_words * sizeof(word_t));
 	assert(buffer != NULL);
 
-	// steps_t*my_steps=(steps_t*)malloc(dm->s_size*sizeof(steps_t));
-
-	// memcpy(my_steps, dm->steps+dm->s_offset, dm->s_size*sizeof(steps_t));
-
+	// Calculate how many and which lines this process will generate
 	steps_t* s	   = dm->steps + dm->s_offset;
 	steps_t* s_end = s + dm->s_size;
 
-	// Allocate line totals buffer
+	// Allocate line totals buffer. For each line we store the number of bits
+	// set
 	uint32_t* lt_buffer = (uint32_t*) calloc(dm->s_size, sizeof(uint32_t));
 	assert(lt_buffer != NULL);
 
@@ -93,9 +80,6 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 
 	// Current line index on line totals buffer
 	uint32_t clt = 0;
-
-	// buffer end
-	// word_t*be=buffer+32*dset->n_words;
 
 	while (s < s_end)
 	{
@@ -123,6 +107,7 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 			clt++;
 		}
 
+		// Save lines to file
 		write_n_lines(dset_id, offset, n_lines_out, dset->n_words, buffer);
 
 		offset += n_lines_out;
@@ -143,15 +128,17 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 oknok_t write_n_lines(hid_t dset_id, uint32_t start, uint8_t n_lines_out,
 					  uint32_t n_words, word_t* buffer)
 {
-	// Setup dataspace
-	// If writing to a portion of a dataset in a loop, be sure
-	// to close the dataspace with each iteration, as this
-	// can cause a large temporary "memory leak".
-	// "Achieving High Performance I/O with HDF5"
+	/**
+	 * Setup dataspace
+	 * If writing to a portion of a dataset in a loop, be sure
+	 * to close the dataspace with each iteration, as this
+	 * can cause a large temporary "memory leak".
+	 * "Achieving High Performance I/O with HDF5"
+	 */
 	hid_t filespace_id = H5Dget_space(dset_id);
 	assert(filespace_id != NOK);
 
-	// We will write one line at a time
+	// We will write n_lines_out lines at a time
 	hsize_t count[2]  = { n_lines_out, n_words };
 	hsize_t offset[2] = { start, 0 };
 
@@ -160,17 +147,23 @@ oknok_t write_n_lines(hid_t dset_id, uint32_t start, uint8_t n_lines_out,
 									 count, NULL);
 	assert(err != NOK);
 
+	// Create a memory dataspace to indicate the size of our buffer
 	hsize_t mem_dimensions[2] = { n_lines_out, n_words };
-	// Create a memory dataspace to indicate the size of our buffer/chunk
-	hid_t memspace_id = H5Screate_simple(2, mem_dimensions, NULL);
+	hid_t memspace_id		  = H5Screate_simple(2, mem_dimensions, NULL);
 	assert(memspace_id != NOK);
 
 	// set up the collective transfer properties list
 	hid_t xfer_plist = H5Pcreate(H5P_DATASET_XFER);
 	assert(xfer_plist != NOK);
 
-	//	err = H5Pset_dxpl_mpio(xfer_plist, H5FD_MPIO_COLLECTIVE);
-	//	assert(err != NOK);
+	/**
+	 * H5FD_MPIO_COLLECTIVE transfer mode is not favourable:
+	 * https://docs.hdfgroup.org/hdf5/rfc/coll_ind_dd6.pdf
+	 */
+	/*
+	err = H5Pset_dxpl_mpio(xfer_plist, H5FD_MPIO_COLLECTIVE);
+	assert(err != NOK);
+	*/
 
 	// Write buffer to dataset
 	err = H5Dwrite(dset_id, H5T_NATIVE_ULONG, memspace_id, filespace_id,
@@ -205,20 +198,24 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 	hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
 	assert(dcpl_id != NOK);
 
-	// H5Pset_layout(dcpl_id, H5D_CHUNKED);
+	/*
+	H5Pset_layout(dcpl_id, H5D_CHUNKED);
 
-	// The choice of the chunk size affects performance!
-	// for now we will choose one line
-	// hsize_t chunk_dimensions[2] = { 1, n_words };
+	The choice of the chunk size affects performance!
+	for now we will choose one line
+	hsize_t chunk_dimensions[2] = { 1, n_words };
 
-	// H5Pset_chunk(dcpl_id, 2, chunk_dimensions);
+	H5Pset_chunk(dcpl_id, 2, chunk_dimensions);
+*/
 
 	// Create a dataset access property list
 	hid_t dapl_id = H5Pcreate(H5P_DATASET_ACCESS);
 	assert(dapl_id != NOK);
 
-	// H5Pset_chunk_cache(dapl_id, H5D_CHUNK_CACHE_NSLOTS_DEFAULT,
-	// 1000*n_words*8, 1);
+	/*
+	H5Pset_chunk_cache(dapl_id, H5D_CHUNK_CACHE_NSLOTS_DEFAULT,
+	1000*n_words*8, 1);
+*/
 
 	// Create the dataset collectively
 	hid_t dset_id
@@ -231,9 +228,11 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 	H5Pclose(dcpl_id);
 	H5Sclose(filespace_id);
 
-	// Allocate input buffer
-	// Rounding to nearest multiple of 64 so we don't have to worry when
-	// transposing the last lines
+	/**
+	 * Allocate input buffer
+	 * Rounding to nearest multiple of 64 so we don't have to worry when
+	 * transposing the last lines
+	 */
 	word_t* in_buffer
 		= (word_t*) calloc(out_n_words * WORD_BITS, sizeof(word_t));
 
@@ -251,20 +250,33 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 	uint32_t start = BLOCK_LOW(rank, size, dset->n_words);
 	uint32_t end   = start + n_words_to_process;
 
-	// Allocate attribute totals buffer
+	/**
+	 * Allocate attribute totals buffer
+	 * We save the totals for each attribute.
+	 * This saves time when selecting the first best attribute
+	 */
 	uint32_t* attr_buffer
 		= (uint32_t*) calloc(n_words_to_process * WORD_BITS, sizeof(uint32_t));
 
 	for (uint32_t iw = start; iw < end; iw++)
 	{
+		/**
+		 * !TODO: Confirm that generating the column is faster than
+		 * reading it from the line dataset
+		 */
 		generate_dm_column(dset, dm, iw, in_buffer);
 
-		// TRANSPOSE LINES
+		/**
+		 * Transpose lines
+		 */
 		for (uint32_t ow = 0; ow < out_n_words; ow++)
 		{
-			// Read 64x64 bits block from input buffer
-			//! WARNING: We may have fewer than 64 lines remaining
-			// We may be reading garbage
+			/**
+			 * Read 64x64 bits block from input buffer
+			 * The last word may not may not have 64 attributes
+			 * and we're working with garbage, but it's fine as
+			 * long as we don't lose count of n_attributes
+			 */
 			memcpy(t_buffer, in_buffer + (ow * WORD_BITS),
 				   sizeof(word_t) * WORD_BITS);
 
@@ -276,22 +288,25 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 			{
 				out_buffer[l * out_n_words + ow] = t_buffer[l];
 
+				// Update attribute totals
 				attr_buffer[(iw - start) * WORD_BITS + l]
 					+= __builtin_popcountl(t_buffer[l]);
 			}
 		}
 
-		// SAVE TRANSPOSED ARRAY
+		// Save transposed array to file
 
 		// Lets try and save 64 full lines at once!
 		hsize_t offset[2] = { iw * WORD_BITS, 0 };
 		hsize_t count[2]  = { WORD_BITS, out_n_words };
 
-		// Setup dataspace
-		// If writing to a portion of a dataset in a loop, be sure
-		// to close the dataspace with each iteration, as this
-		// can cause a large temporary "memory leak".
-		// "Achieving High Performance I/O with HDF5"
+		/**
+		 * Setup dataspace
+		 * If writing to a portion of a dataset in a loop, be sure
+		 * to close the dataspace with each iteration, as this
+		 * can cause a large temporary "memory leak".
+		 * "Achieving High Performance I/O with HDF5"
+		 */
 		filespace_id = H5Dget_space(dset_id);
 
 		H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, offset, NULL, count,
@@ -322,17 +337,22 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 
 	H5Dclose(dset_id);
 
-	// Remove extra values
-	// The number of attributes may not be divisable by 64, so we could have
-	// extra values in the attr_buffer that are not necessary.
+	/**
+	 * Remove extra values
+	 * The number of attributes may not be divisable by 64, so we could have
+	 * extra values in the attr_buffer that are not necessary.
+	 */
 	uint32_t n_lines = n_words_to_process * WORD_BITS;
 	if ((start + n_words_to_process) * WORD_BITS > dset->n_attributes)
 	{
 		n_lines = dset->n_attributes - start * WORD_BITS;
 	}
 
-	mpi_write_attribute_totals(hdf5_dset, attr_buffer, start * WORD_BITS,
-							   n_lines, dset->n_attributes);
+	if (n_lines > 0)
+	{
+		mpi_write_attribute_totals(hdf5_dset, attr_buffer, start * WORD_BITS,
+								   n_lines, dset->n_attributes);
+	}
 
 	free(attr_buffer);
 
@@ -342,8 +362,6 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 oknok_t mpi_write_line_totals(const dataset_hdf5_t* hdf5_dset, const dm_t* dm,
 							  const uint32_t* data)
 {
-
-	// CREATE OUTPUT DATASET
 	// Output dataset dimensions
 	hsize_t dimensions[2] = { dm->n_matrix_lines, 1 };
 
@@ -353,14 +371,6 @@ oknok_t mpi_write_line_totals(const dataset_hdf5_t* hdf5_dset, const dm_t* dm,
 	// Create a dataset creation property list
 	hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
 	assert(dcpl_id != NOK);
-
-	// H5Pset_layout(dcpl_id, H5D_CHUNKED);
-
-	// The choice of the chunk size affects performance!
-	// for now we will choose one line
-	// hsize_t chunk_dimensions[2] = { 1, n_words };
-
-	// H5Pset_chunk(dcpl_id, 2, chunk_dimensions);
 
 	// Create a dataset access property list
 	hid_t dapl_id = H5Pcreate(H5P_DATASET_ACCESS);
@@ -383,19 +393,8 @@ oknok_t mpi_write_line_totals(const dataset_hdf5_t* hdf5_dset, const dm_t* dm,
 	hid_t memspace_id		  = H5Screate_simple(2, mem_dimensions, NULL);
 	assert(memspace_id != NOK);
 
-	// This is only needed if we're saving collectively,
-	// because all processes must participate in the operation
-	if (dm->s_size == 0)
-	{
-		// Nothing to save
-		H5Sselect_none(filespace_id);
-		H5Sselect_none(memspace_id);
-	}
-	else
-	{
-		H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, offset, NULL, count,
-							NULL);
-	}
+	H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, offset, NULL, count,
+						NULL);
 
 	// set up the collective transfer properties list
 	hid_t xfer_plist = H5Pcreate(H5P_DATASET_XFER);
@@ -417,8 +416,6 @@ oknok_t mpi_write_attribute_totals(const dataset_hdf5_t* hdf5_dset,
 								   const uint32_t n_lines,
 								   const uint32_t n_attributes)
 {
-
-	// CREATE OUTPUT DATASET
 	// Output dataset dimensions
 	hsize_t dimensions[2] = { n_attributes, 1 };
 
@@ -428,14 +425,6 @@ oknok_t mpi_write_attribute_totals(const dataset_hdf5_t* hdf5_dset,
 	// Create a dataset creation property list
 	hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
 	assert(dcpl_id != NOK);
-
-	// H5Pset_layout(dcpl_id, H5D_CHUNKED);
-
-	// The choice of the chunk size affects performance!
-	// for now we will choose one line
-	// hsize_t chunk_dimensions[2] = { 1, n_words };
-
-	// H5Pset_chunk(dcpl_id, 2, chunk_dimensions);
 
 	// Create a dataset access property list
 	hid_t dapl_id = H5Pcreate(H5P_DATASET_ACCESS);
@@ -458,18 +447,10 @@ oknok_t mpi_write_attribute_totals(const dataset_hdf5_t* hdf5_dset,
 	hid_t memspace_id		  = H5Screate_simple(2, mem_dimensions, NULL);
 	assert(memspace_id != NOK);
 
-	if (n_lines == 0)
-	{
-		H5Sselect_none(filespace_id);
-		H5Sselect_none(memspace_id);
-	}
-	else
-	{
-		H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, offset, NULL, count,
-							NULL);
-	}
+	H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, offset, NULL, count,
+						NULL);
 
-	// set up the collective transfer properties list
+	// Set up the collective transfer properties list
 	hid_t xfer_plist = H5Pcreate(H5P_DATASET_XFER);
 	assert(xfer_plist != NOK);
 

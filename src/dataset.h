@@ -23,10 +23,6 @@
 #define DATASET_NOT_ENOUGH_OBSERVATIONS 8
 #define DATASET_ERROR_ALLOCATING_DATA	16
 
-/**
- *
- */
-
 #define NEXT_LINE(line, n_words) ((line) += (n_words))
 
 #define GET_NEXT_LINE(line, n_words) ((line) + (n_words))
