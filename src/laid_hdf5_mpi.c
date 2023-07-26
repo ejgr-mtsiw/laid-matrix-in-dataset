@@ -24,6 +24,8 @@
 #include "utils/block.h"
 #include "utils/clargs.h"
 #include "utils/math.h"
+#include "utils/output.h"
+#include "utils/ranks.h"
 #include "utils/sort_r.h"
 #include "utils/timing.h"
 
@@ -92,13 +94,13 @@ int main(int argc, char** argv)
 	 */
 	clargs_t args;
 
-	// Parse command line arguments
+	/**
+	 * Parse command line arguments
+	 */
 	if (read_args(argc, argv, &args) == READ_CL_ARGS_NOK)
 	{
 		return EXIT_FAILURE;
 	}
-
-	SETUP_TIMING;
 
 	/*
 	 * Initialize MPI
@@ -109,12 +111,19 @@ int main(int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 
-	// rank of process
+	/**
+	 * rank of process
+	 */
 	int rank;
-	// number of processes
+
+	/**
+	 * number of processes
+	 */
 	int size;
 
-	// Global communicator group
+	/**
+	 * Global communicator group
+	 */
 	MPI_Comm comm = MPI_COMM_WORLD;
 
 	MPI_Comm_size(comm, &size);
@@ -122,8 +131,10 @@ int main(int argc, char** argv)
 
 	MPI_Comm node_comm = MPI_COMM_NULL;
 
-	// Create node-local communicator
-	// This communicator is used to share memory with processes intranode
+	/**
+	 * Create node-local communicator
+	 * This communicator is used to share memory with processes intranode
+	 */
 	MPI_Comm_split_type(comm, MPI_COMM_TYPE_SHARED, rank, MPI_INFO_NULL,
 						&node_comm);
 
@@ -132,10 +143,21 @@ int main(int argc, char** argv)
 	MPI_Comm_size(node_comm, &node_size);
 	MPI_Comm_rank(node_comm, &node_rank);
 
+	/**
+	 * Timing for the full operation
+	 */
 	time_t main_tick = 0, main_tock = 0;
-	if (rank == 0)
+
+	/**
+	 * Local timing structures
+	 */
+	time_t tick = 0, tock = 0;
+
+	if (rank == ROOT_RANK)
 	{
-		// Timing for the full operation
+		/**
+		 * Timing for the full operation
+		 */
 		main_tick = time(0);
 	}
 
@@ -155,7 +177,11 @@ int main(int argc, char** argv)
 	 */
 	dm_t dm;
 
-	// Open dataset file
+	/**
+	 * Open dataset file
+	 */
+	ROOT_SHOWS("Using dataset '%s'\n", args.filename);
+	ROOT_SHOWS("Using %d processes\n\n", size);
 	if (mpi_hdf5_open_dataset(args.filename, args.datasetname, comm,
 							  MPI_INFO_NULL, &hdf5_dset)
 		== NOK)
@@ -163,33 +189,38 @@ int main(int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 
-	// We can jump straight to the set covering algorithm
-	// if we already have the matrix in the hdf5 dataset
+	/**
+	 * We can jump straight to the set covering algorithm
+	 * if we already have the matrix in the hdf5 dataset
+	 */
 	uint8_t skip_dm_creation
 		= hdf5_dataset_exists(hdf5_dset.file_id, DM_LINE_DATA);
 
-	if (rank == 0)
-	{
-		printf("- Disjoint matrix dataset %sfound!.\n",
-			   skip_dm_creation ? "" : "not ");
-	}
-
 	if (skip_dm_creation)
 	{
-		// We don't have to build the disjoint matrix!
+		/**
+		 * We don't have to build the disjoint matrix!
+		 */
+		ROOT_SAYS("Disjoint matrix dataset found!.\n\n");
+
 		goto apply_set_cover;
 	}
 
-	// We have to build the disjoint matrices.
-
+	/**
+	 * We have to build the disjoint matrices.
+	 */
+	ROOT_SAYS("Disjoint matrix dataset not found!.\n\n");
+	ROOT_SAYS("Initializing MPI RMA: ");
 	TICK;
 
 	dataset.n_observations = hdf5_dset.dimensions[0];
 	dataset.n_words		   = hdf5_dset.dimensions[1];
 
-	// Only rank 0 on a node actually allocates memory
+	/**
+	 * Only rank 0 on a node actually allocates memory
+	 */
 	uint64_t dset_data_size = 0;
-	if (node_rank == 0)
+	if (node_rank == LOCAL_ROOT_RANK)
 	{
 		dset_data_size = dataset.n_observations * dataset.n_words;
 	}
@@ -204,8 +235,10 @@ int main(int argc, char** argv)
 							MPI_INFO_NULL, node_comm, &dset_data,
 							&win_shared_dset);
 
-	// Set dataset data pointer
-	if (node_rank == 0)
+	/**
+	 * Set dataset data pointer
+	 */
+	if (node_rank == LOCAL_ROOT_RANK)
 	{
 		dataset.data = dset_data;
 	}
@@ -216,20 +249,18 @@ int main(int argc, char** argv)
 		MPI_Win_shared_query(win_shared_dset, 0, &win_size, &win_disp,
 							 &dataset.data);
 	}
+	/**
+	 *All table pointers should now point to copy on noderank 0
+	 */
+	TOCK;
 
-	if (rank == 0)
+	/**
+	 * Setup dataset
+	 */
+	if (node_rank == LOCAL_ROOT_RANK)
 	{
-		fprintf(stdout, "- Finished MPI RMA Init ");
-		TOCK(stdout);
-	}
-	// All table pointers should now point to copy on noderank 0
-
-	// Setup dataset
-	if (node_rank == 0)
-	{
+		ROOT_SAYS("Reading dataset: ");
 		TICK;
-
-		fprintf(stdout, "- Loading dataset data\n - ");
 
 		// Load dataset attributes
 		hdf5_read_dataset_attributes(hdf5_dset.dataset_id, &dataset);
@@ -237,68 +268,80 @@ int main(int argc, char** argv)
 		// Load dataset data
 		hdf5_read_dataset_data(hdf5_dset.dataset_id, dataset.data);
 
-		print_dataset_details(stdout, &dataset);
+		TOCK;
+		/**
+		 * Print dataset details
+		 */
+		ROOT_SHOWS("  Classes = %d", dataset.n_classes);
+		ROOT_SHOWS(" [%d bits]\n", dataset.n_bits_for_class);
+		ROOT_SHOWS("  Attributes = %d \n", dataset.n_attributes);
+		ROOT_SHOWS("  Observations = %d \n", dataset.n_observations);
 
-		fprintf(stdout, " - Finished loading dataset data ");
-
-		TOCK(stdout);
+		/**Sort dataset
+		 *
+		 */
+		ROOT_SAYS("Sorting dataset: ");
 		TICK;
 
-		// Sort dataset
-		fprintf(stdout, "- Sorting dataset\n");
-
-		// We need to know the number of longs in each line of the dataset
-		// so we can't use the standard qsort implementation
+		/**
+		 * We need to know the number of longs in each line of the dataset
+		 * so we can't use the standard qsort implementation
+		 */
 		sort_r(dataset.data, dataset.n_observations,
 			   dataset.n_words * sizeof(word_t), compare_lines_extra,
 			   &dataset.n_words);
 
-		fprintf(stdout, " - Sorted dataset");
-		TOCK(stdout);
-		TICK;
+		TOCK;
 
-		// Remove duplicates
-		fprintf(stdout, "- Removing duplicates:\n");
+		/**
+		 * Remove duplicates
+		 */
+		ROOT_SAYS("Removing duplicates: ");
+		TICK;
 
 		unsigned int duplicates = remove_duplicates(&dataset);
 
-		fprintf(stdout, " - %d duplicate(s) removed ", duplicates);
-		TOCK(stdout);
-		TICK;
+		TOCK;
+		ROOT_SHOWS("  %d duplicate(s) removed\n", duplicates);
 
-		// Fill class arrays
-		fprintf(stdout, "- Checking classes: ");
+		/**
+		 * Fill class arrays
+		 */
+		ROOT_SAYS("Checking classes: ");
+		TICK;
 
 		if (fill_class_arrays(&dataset) != OK)
 		{
 			return EXIT_FAILURE;
 		}
 
-		TOCK(stdout);
+		TOCK;
 
 		for (unsigned int i = 0; i < dataset.n_classes; i++)
 		{
-			fprintf(stdout, " - class %d: %d item(s)\n", i,
-					dataset.n_observations_per_class[i]);
+			ROOT_SHOWS("  Class %d: ", i);
+			ROOT_SHOWS("%d item(s)\n", dataset.n_observations_per_class[i]);
 		}
 
+		/**
+		 * Set JNSQ
+		 */
+		ROOT_SAYS("Setting up JNSQ attributes: ");
 		TICK;
-
-		// Set JNSQ
-		fprintf(stdout, "- Setting up JNSQ attributes:\n");
 
 		unsigned int max_jnsq = add_jnsqs(&dataset);
 
-		fprintf(stdout, " - Max JNSQ: %d [%d bits] ", max_jnsq,
-				dataset.n_bits_for_jnsqs);
-		TOCK(stdout);
+		TOCK;
+		ROOT_SHOWS("  Max JNSQ: %d", max_jnsq);
+		ROOT_SHOWS(" [%d bits]\n", dataset.n_bits_for_jnsqs);
 	}
 
-	// End setup dataset
-	// MPI_Barrier(node_comm);
+	/**
+	 * End setup dataset
+	 */
 
 	dm.n_matrix_lines = 0;
-	if (node_rank == 0)
+	if (node_rank == LOCAL_ROOT_RANK)
 	{
 		dm.n_matrix_lines = get_dm_n_lines(&dataset);
 	}
@@ -314,8 +357,10 @@ int main(int argc, char** argv)
 	 */
 	steps_t* steps = NULL;
 
-	// Set dataset data pointer
-	if (node_rank == 0)
+	/**
+	 * Set dataset data pointer
+	 */
+	if (node_rank == LOCAL_ROOT_RANK)
 	{
 		steps = localsteps;
 	}
@@ -325,21 +370,26 @@ int main(int argc, char** argv)
 		int win_disp;
 		MPI_Win_shared_query(win_shared_steps, 0, &win_size, &win_disp, &steps);
 	}
-	// All table pointers should now point to copy on noderank 0
+	/**
+	 * All table pointers should now point to copy on noderank 0
+	 */
 
-	// Setup steps
-	if (node_rank == 0)
+	/**
+	 * Setup steps
+	 */
+	if (node_rank == LOCAL_ROOT_RANK)
 	{
+		ROOT_SAYS("Generating matrix steps: ");
 		TICK;
-
-		fprintf(stdout, "- Generating matrix steps\n");
 
 		uint32_t nc	   = dataset.n_classes;
 		uint32_t no	   = dataset.n_observations;
 		uint32_t* opc  = dataset.observations_per_class;
 		uint32_t* nopc = dataset.n_observations_per_class;
 
-		// DO IT
+		/**
+		 * DO IT
+		 */
 		uint32_t cs = 0;
 
 		for (uint32_t ca = 0; ca < nc - 1; ca++)
@@ -365,14 +415,18 @@ int main(int argc, char** argv)
 		dataset.n_observations_per_class = NULL;
 		dataset.observations_per_class	 = NULL;
 
-		fprintf(stdout, " - Finished generating matrix steps ");
-		TOCK(stdout);
+		TOCK;
+		ROOT_SHOWS("  %d matrix steps generated\n", dm.n_matrix_lines);
+
+		double matrix_size
+			= ((double) dm.n_matrix_lines
+			   * (dataset.n_attributes + dataset.n_bits_for_jnsqs))
+			/ (1024 * 1024 * 8);
+		ROOT_SHOWS("  Estimated disjoint matrix size: %3.2fMB\n", matrix_size);
 	}
 
-	if (rank == 0)
-	{
-		fprintf(stdout, "- Broadcasting attributes\n");
-	}
+	ROOT_SAYS("Sharing dataset attributes: ");
+	TICK;
 
 	uint64_t toshare[4];
 	if (node_rank == 0)
@@ -398,24 +452,20 @@ int main(int argc, char** argv)
 	dm.s_offset = BLOCK_LOW(rank, size, dm.n_matrix_lines);
 	dm.s_size	= BLOCK_SIZE(rank, size, dm.n_matrix_lines);
 
-	if (rank == 0)
-	{
-		fprintf(stdout, " - Finished broadcasting attributes\n");
-		fprintf(stdout, "- Building disjoint matrix\n");
-		TICK;
-	}
+	TOCK;
+	ROOT_SAYS("Building disjoint matrix [1/2]: ");
+	TICK;
 
 	// MPI_Barrier(node_comm);
-	//  Build part of the disjoint matrix and store it in the hdf5 file
+
+	/**
+	 *Build part of the disjoint matrix and store it in the hdf5 file
+	 */
 	mpi_create_line_dataset(&hdf5_dset, &dataset, &dm);
 
-	// MPI_Barrier(comm);
-	if (rank == 0)
-	{
-		fprintf(stdout, " - Finished building disjoint matrix [1/2] ");
-		TOCK(stdout);
-		TICK;
-	}
+	TOCK;
+	ROOT_SAYS("Building disjoint matrix [2/2]: ");
+	TICK;
 
 	// MPI_Barrier(comm);
 
@@ -423,12 +473,12 @@ int main(int argc, char** argv)
 
 	MPI_Barrier(comm);
 
-	if (rank == 0)
-	{
-		fprintf(stdout, " - Finished building disjoint matrix [2/2] ");
-		TOCK(stdout);
-	}
+	TOCK;
 
+	/**
+	 * We no longer need the original dataset
+	 * or the steps to generate the disjoint matrix
+	 */
 	MPI_Win_free(&win_shared_dset);
 	MPI_Win_free(&win_shared_steps);
 
@@ -466,20 +516,20 @@ apply_set_cover:
 	 *   - Show solution
 	 */
 
-	// We no longer need to keep the original dataset open
+	/**
+	 * We no longer need to keep the original dataset open
+	 */
 	H5Dclose(hdf5_dset.dataset_id);
 
-	if (rank == 0)
-	{
-		TICK;
-
-		printf("- Applying set covering algorithm\n");
-	}
+	ROOT_SAYS("Applying set covering algorithm:\n");
+	TICK;
 
 	cover_t cover;
 	init_cover(&cover);
 
-	/* open the line dataset*/
+	/**
+	 * Open the line dataset
+	 */
 	hid_t d_id = H5Dopen2(hdf5_dset.file_id, DM_LINE_DATA, H5P_DEFAULT);
 	assert(d_id != NOK);
 
@@ -488,7 +538,9 @@ apply_set_cover:
 	line_dset_id.dataset_id = d_id;
 	hdf5_get_dataset_dimensions(d_id, line_dset_id.dimensions);
 
-	/* open the column dataset*/
+	/**
+	 * Open the column dataset
+	 */
 	d_id = H5Dopen2(hdf5_dset.file_id, DM_COLUMN_DATA, H5P_DEFAULT);
 	assert(d_id != NOK);
 
@@ -497,8 +549,10 @@ apply_set_cover:
 	column_dset_id.dataset_id = d_id;
 	hdf5_get_dataset_dimensions(d_id, column_dset_id.dimensions);
 
-	// If we skipped the matriz generation, dataset and dm are empty.
-	// So we need to read the attributes from the dataset
+	/**
+	 * If we skipped the matriz generation, dataset and dm are empty.
+	 * So we need to read the attributes from the dataset
+	 */
 	hdf5_read_attribute(line_dset_id.dataset_id, N_MATRIX_LINES_ATTR,
 						H5T_NATIVE_UINT32_g, &cover.n_matrix_lines);
 	hdf5_read_attribute(line_dset_id.dataset_id, N_ATTRIBUTES_ATTR,
@@ -506,8 +560,10 @@ apply_set_cover:
 
 	cover.n_words_in_a_line = line_dset_id.dimensions[1];
 
-	// Each process only needs acces to some rows, we don't need the entire
-	// column (attribute data)
+	/**
+	 * Each process only needs acces to some rows,
+	 * we don't need the entire column (attribute data)
+	 */
 	uint32_t n_words_in_a_column = cover.n_matrix_lines / WORD_BITS
 		+ (cover.n_matrix_lines % WORD_BITS != 0);
 
@@ -519,7 +575,9 @@ apply_set_cover:
 	cover.attribute_totals
 		= (uint32_t*) calloc(cover.n_attributes, sizeof(uint32_t));
 
-	// Global totals. Only root needs these
+	/**
+	 * Global totals. Only root needs these
+	 */
 	uint32_t* global_attribute_totals = NULL;
 	uint32_t* attribute_totals_buffer = NULL;
 
@@ -528,7 +586,7 @@ apply_set_cover:
 	 */
 	uint32_t n_uncovered_lines = 0;
 
-	if (rank == 0)
+	if (rank == ROOT_RANK)
 	{
 		global_attribute_totals
 			= (uint32_t*) calloc(cover.n_attributes, sizeof(uint32_t));
@@ -542,7 +600,9 @@ apply_set_cover:
 		read_initial_attribute_totals(hdf5_dset.file_id,
 									  global_attribute_totals);
 
-		// No line is covered so far
+		/**
+		 * No line is covered so far
+		 */
 		n_uncovered_lines = cover.n_matrix_lines;
 	}
 
@@ -550,19 +610,27 @@ apply_set_cover:
 	{
 		int64_t best_attribute = 0;
 
-		if (rank == 0)
+		if (rank == ROOT_RANK)
 		{
 			best_attribute = get_best_attribute_index(global_attribute_totals,
 													  cover.n_attributes);
 
-			printf(" - Selected attribute #%ld\n", best_attribute);
+			ROOT_SHOWS("  Selected attribute #%ld, ", best_attribute);
+			ROOT_SHOWS("covers %d lines ",
+					   global_attribute_totals[best_attribute]);
+			TOCK;
+			TICK;
 
 			mark_attribute_as_selected(&cover, best_attribute);
 
-			// Update number of lines remaining
+			/**
+			 * Update number of lines remaining
+			 */
 			n_uncovered_lines -= global_attribute_totals[best_attribute];
 
-			// If we covered all of them, we can leav earlier
+			/**
+			 * If we covered all of them, we can leav earlier
+			 */
 			if (n_uncovered_lines == 0)
 			{
 				best_attribute = -1;
@@ -576,11 +644,13 @@ apply_set_cover:
 			goto show_solution;
 		}
 
-		// Even if this process has no lines it needs to participate in
-		// the MPI_Reduce
+		/**
+		 * Even if this process has no lines it needs to participate in
+		 * the MPI_Reduce
+		 */
 		if (cover.column_n_words == 0)
 		{
-			// printf("[%d] NOTHING TO DO!\n", rank);
+			SAY("NOTHING TO DO!\n");
 			goto mpi_reduce;
 		}
 
@@ -598,7 +668,10 @@ mpi_reduce:
 		MPI_Reduce(cover.attribute_totals, attribute_totals_buffer,
 				   cover.n_attributes, MPI_INT, MPI_SUM, 0, comm);
 
-		if (rank == 0)
+		/**
+		 * Update global totals
+		 */
+		if (rank == ROOT_RANK)
 		{
 			for (uint32_t a = 0; a < cover.n_attributes; a++)
 			{
@@ -606,35 +679,52 @@ mpi_reduce:
 			}
 		}
 
-		// reset_local_totals:
+		/**
+		 * Reset local totals
+		 */
 		memset(cover.attribute_totals, 0,
 			   cover.n_attributes * sizeof(uint32_t));
 	}
 
 show_solution:
-	if (rank == 0)
-	{
-		printf(" - Finished applying set covering algorithm ");
-		TOCK(stdout);
-
-		print_solution(stdout, &cover);
-	}
-
 	// wait for everyone
 	MPI_Barrier(comm);
+
+	if (rank == ROOT_RANK)
+	{
+		fprintf(stdout, "Solution: { ");
+
+		uint32_t current_attribute = 0;
+		for (uint32_t w = 0; w < dataset.n_words; w++)
+		{
+			for (int8_t bit = WORD_BITS - 1; bit >= 0;
+				 bit--, current_attribute++)
+			{
+				if (BIT_CHECK(cover.selected_attributes[w], bit))
+				{
+					fprintf(stdout, "%d ", current_attribute);
+				}
+			}
+		}
+
+		fprintf(stdout, "}\n");
+		fprintf(stdout, "All done! ");
+		main_tock = time(0);
+		fprintf(stdout, "[%lds]\n", main_tock - main_tick);
+
+		free(global_attribute_totals);
+		global_attribute_totals = NULL;
+
+		free(attribute_totals_buffer);
+		attribute_totals_buffer = NULL;
+
+		free_cover(&cover);
+	}
 
 	// Close dataset files
 	H5Dclose(line_dset_id.dataset_id);
 	H5Dclose(column_dset_id.dataset_id);
 	H5Fclose(hdf5_dset.file_id);
-
-	if (rank == 0)
-	{
-		fprintf(stdout, "All done! ");
-
-		main_tock = time(0);
-		fprintf(stdout, "[%lds]\n", main_tock - main_tick);
-	}
 
 	/* shut down MPI */
 	MPI_Finalize();
