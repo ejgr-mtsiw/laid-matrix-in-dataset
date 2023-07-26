@@ -57,15 +57,44 @@ int64_t get_best_attribute_index(const uint32_t* totals,
 
 oknok_t remove_line_contribution(cover_t* cover, const word_t* line)
 {
-	uint32_t current_attribute = 0;
+	/**
+	 * Current attribute
+	 */
+	uint32_t c_attribute = 0;
 
-	for (uint32_t w = 0; w < cover->n_words_in_a_line; w++)
+	/**
+	 * Current word
+	 */
+	uint32_t c_word = 0;
+
+	/**
+	 * Number of words with WORD_BITS attributes
+	 */
+	uint32_t n_full_words = cover->n_words_in_a_line - 1;
+
+	/**
+	 * Last bit to process in the last word
+	 */
+	uint8_t n_last_word = WORD_BITS - (cover->n_attributes % WORD_BITS);
+
+	/**
+	 * Process full words
+	 */
+	for (c_word = 0; c_word < n_full_words; c_word++)
 	{
-		for (int8_t bit = WORD_BITS - 1; bit >= 0; bit--, current_attribute++)
+		for (int8_t bit = WORD_BITS - 1; bit >= 0; bit--, c_attribute++)
 		{
-			cover->attribute_totals[current_attribute]
-				-= BIT_CHECK(line[w], bit);
+			cover->attribute_totals[c_attribute]
+				-= BIT_CHECK(line[c_word], bit);
 		}
+	}
+
+	/**
+	 * Process last word
+	 */
+	for (int8_t bit = WORD_BITS - 1; bit >= n_last_word; bit--, c_attribute++)
+	{
+		cover->attribute_totals[c_attribute] -= BIT_CHECK(line[c_word], bit);
 	}
 
 	return OK;
@@ -73,15 +102,44 @@ oknok_t remove_line_contribution(cover_t* cover, const word_t* line)
 
 oknok_t add_line_contribution(cover_t* cover, const word_t* line)
 {
-	uint32_t current_attribute = 0;
+	/**
+	 * Current attribute
+	 */
+	uint32_t c_attribute = 0;
 
-	for (uint32_t w = 0; w < cover->n_words_in_a_line; w++)
+	/**
+	 * Current word
+	 */
+	uint32_t c_word = 0;
+
+	/**
+	 * Number of words with WORD_BITS attributes
+	 */
+	uint32_t n_full_words = cover->n_words_in_a_line - 1;
+
+	/**
+	 * Last bit to process in the last word
+	 */
+	uint8_t n_last_word = WORD_BITS - (cover->n_attributes % WORD_BITS);
+
+	/**
+	 * Process full words
+	 */
+	for (c_word = 0; c_word < n_full_words; c_word++)
 	{
-		for (int8_t bit = WORD_BITS - 1; bit >= 0; bit--, current_attribute++)
+		for (int8_t bit = WORD_BITS - 1; bit >= 0; bit--, c_attribute++)
 		{
-			cover->attribute_totals[current_attribute]
-				+= BIT_CHECK(line[w], bit);
+			cover->attribute_totals[c_attribute]
+				+= BIT_CHECK(line[c_word], bit);
 		}
+	}
+
+	/**
+	 * Process last word
+	 */
+	for (int8_t bit = WORD_BITS - 1; bit >= n_last_word; bit--, c_attribute++)
+	{
+		cover->attribute_totals[c_attribute] += BIT_CHECK(line[c_word], bit);
 	}
 
 	return OK;
@@ -109,7 +167,7 @@ oknok_t mark_attribute_as_selected(cover_t* cover, int64_t attribute)
 
 void print_solution(FILE* stream, cover_t* cover)
 {
-	fprintf(stream, "- Solution: { ");
+	fprintf(stream, "Solution: { ");
 
 	uint32_t current_attribute = 0;
 
