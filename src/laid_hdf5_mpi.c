@@ -577,6 +577,11 @@ apply_set_cover:
 		= (uint32_t*) calloc(cover.n_attributes, sizeof(uint32_t));
 
 	/**
+	 * Store one column from the disjoint matrix
+	 */
+	word_t* column = (word_t*) calloc(cover.column_n_words, sizeof(word_t));
+
+	/**
 	 * Global totals. Only root needs these
 	 */
 	uint32_t* global_attribute_totals = NULL;
@@ -655,8 +660,6 @@ apply_set_cover:
 			goto mpi_reduce;
 		}
 
-		word_t* column = (word_t*) calloc(cover.column_n_words, sizeof(word_t));
-
 		get_column(column_dset_id.dataset_id, best_attribute,
 				   cover.column_offset_words, cover.column_n_words, column);
 
@@ -704,9 +707,11 @@ show_solution:
 
 		free(attribute_totals_buffer);
 		attribute_totals_buffer = NULL;
-
-		free_cover(&cover);
 	}
+
+	free(column);
+	column = NULL;
+	free_cover(&cover);
 
 	// Close dataset files
 	H5Dclose(line_dset_id.dataset_id);
