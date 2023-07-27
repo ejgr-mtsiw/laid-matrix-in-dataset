@@ -1,9 +1,12 @@
 #!/bin/bash
 
-#SBATCH --job-name=compile@short
-#SBATCH --time=0:1:0
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
+#SBATCH --job-name="P2-compile@short"
+
+##SBATCH --time=0:1:0
+
+#SBATCH --ntasks=1
+##SBATCH --nodes=1
+##SBATCH --ntasks-per-node=1
 
 # Be sure to request the correct partition to avoid the job to be held in the queue, furthermore
 #	on CIRRUS-B (Minho)  choose for example HPC_4_Days
@@ -14,9 +17,7 @@
 module purge
 
 # Load software modules. Please check session software for the details
-module load hdf5/1.12.0
-##module load gcc83/openmpi/4.1.1
-##module load clang/openmpi/4.0.3
+module load gcc11/libs/hdf5/1.14.0
 
 # Compile application
 cd ..
