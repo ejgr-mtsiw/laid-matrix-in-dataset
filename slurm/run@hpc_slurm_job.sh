@@ -37,10 +37,10 @@ HDF5_DISABLE_VERSION_CHECK=2 # Runs without showing the warning message
 export HDF5_DISABLE_VERSION_CHECK
 
 # Used to guarantee that the environment does not have any other loaded module
-#module purge
+module purge
 
 # Load software modules. Please check session software for the details
-#module load gcc11/libs/hdf5/1.14.0
+module load gcc11/libs/hdf5/1.14.0
 
 # Be sure to request the correct partition to avoid the job to be held in the queue, furthermore
 #	on CIRRUS-B (Minho)  choose for example HPC_4_Days
