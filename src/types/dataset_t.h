@@ -56,10 +56,10 @@ typedef struct dataset_t
 	uint32_t* n_observations_per_class;
 
 	/**
-	 * Array with the indexes for each observation per class.
+	 * Array with pointers for each observation per class.
 	 * They reference lines in *data
 	 */
-	uint32_t* observations_per_class;
+	word_t** observations_per_class;
 
 } dataset_t;
 

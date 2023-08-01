@@ -46,7 +46,7 @@ bool hdf5_file_has_dataset(const char* filename, const char* datasetname)
 oknok_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t* dataset)
 {
 	uint32_t n_classes = 0;
-	hdf5_read_attribute(dataset_id, N_CLASSES_ATTR, H5T_NATIVE_UINT,
+	hdf5_read_attribute(dataset_id, N_CLASSES_ATTR, H5T_NATIVE_UINT32,
 						&n_classes);
 
 	if (n_classes < 2)
@@ -57,7 +57,7 @@ oknok_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t* dataset)
 
 	// Number of observations (lines) in the dataset
 	uint32_t n_observations = 0;
-	hdf5_read_attribute(dataset_id, N_OBSERVATIONS_ATTR, H5T_NATIVE_UINT,
+	hdf5_read_attribute(dataset_id, N_OBSERVATIONS_ATTR, H5T_NATIVE_UINT32,
 						&n_observations);
 
 	if (n_observations < 2)
@@ -68,7 +68,7 @@ oknok_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t* dataset)
 
 	// Number of attributes in the dataset
 	uint32_t n_attributes = 0;
-	hdf5_read_attribute(dataset_id, N_ATTRIBUTES_ATTR, H5T_NATIVE_UINT,
+	hdf5_read_attribute(dataset_id, N_ATTRIBUTES_ATTR, H5T_NATIVE_UINT32,
 						&n_attributes);
 
 	if (n_attributes < 1)
@@ -140,7 +140,7 @@ oknok_t hdf5_read_attribute(hid_t dataset_id, const char* attribute,
 oknok_t hdf5_read_dataset_data(hid_t dataset_id, word_t* data)
 {
 	// Fill dataset from hdf5 file
-	herr_t status = H5Dread(dataset_id, H5T_NATIVE_ULONG, H5S_ALL, H5S_ALL,
+	herr_t status = H5Dread(dataset_id, H5T_NATIVE_UINT64, H5S_ALL, H5S_ALL,
 							H5P_DEFAULT, data);
 
 	if (status < 0)
@@ -183,7 +183,7 @@ oknok_t hdf5_read_lines(const dataset_hdf5_t* dataset, const uint32_t index,
 						NULL);
 
 	// Read line from dataset
-	H5Dread(dataset->dataset_id, H5T_NATIVE_ULONG, memspace_id, dataspace_id,
+	H5Dread(dataset->dataset_id, H5T_NATIVE_UINT64, memspace_id, dataspace_id,
 			H5P_DEFAULT, lines);
 
 	H5Sclose(dataspace_id);

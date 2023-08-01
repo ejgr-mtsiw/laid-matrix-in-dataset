@@ -9,6 +9,7 @@
 #ifndef MPI_DISJOINT_MATRIX_H
 #define MPI_DISJOINT_MATRIX_H
 
+#include "types/class_offsets_t.h"
 #include "types/dataset_hdf5_t.h"
 #include "types/dataset_t.h"
 #include "types/dm_t.h"
@@ -56,5 +57,12 @@ oknok_t mpi_write_attribute_totals(const dataset_hdf5_t* hdf5_dset,
 								   const uint32_t* data, const uint32_t start,
 								   const uint32_t n_lines,
 								   const uint32_t n_attributes);
+
+/**
+ * Fills the initial class offsets for the disjoint matrix
+ * These offsets are used to calculate the first line of
+ * the disjoint matrix for each process.
+ */
+oknok_t calculate_initial_offsets(const dataset_t *dataset, const uint32_t line, class_offsets_t*class_offsets);
 
 #endif // MPI_DISJOINT_MATRIX_H

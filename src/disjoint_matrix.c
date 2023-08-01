@@ -42,22 +42,41 @@ uint32_t get_dm_n_lines(const dataset_t* dataset)
 	return n;
 }
 
-oknok_t generate_dm_column(const dataset_t* dset, const dm_t* dm,
-						   const int column, word_t* buffer)
+oknok_t generate_dm_column(const dataset_t* dset, const int column,
+						   word_t* buffer)
 {
-	word_t* current_buffer = buffer;
+	uint32_t nc	   = dset->n_classes;
+	uint32_t nobs  = dset->n_observations;
+	uint32_t* nopc = dset->n_observations_per_class;
+	word_t** opc   = dset->observations_per_class;
 
-	steps_t* s	   = dm->steps;
-	steps_t* s_end = s + dm->n_matrix_lines;
+	// Current buffer line
+	word_t* bl = buffer;
 
-	for (; s < s_end; s++)
+	/**
+	 * MUST BE THE SAME ALGORITHMN / ORDER USED WHEN FILLING THE CLASS OFFSETS!
+	 */
+	for (uint32_t ca = 0; ca < nc - 1; ca++)
 	{
-		word_t* la = dset->data + (s->indexA * dset->n_words) + column;
-		word_t* lb = dset->data + (s->indexB * dset->n_words) + column;
+		word_t** bla = opc + ca * nobs;
+		for (uint32_t ia = 0; ia < nopc[ca]; ia++)
+		{
+			word_t* la = *(bla + ia);
+			for (uint32_t cb = ca + 1; cb < nc; cb++)
+			{
+				word_t** blb = opc + cb * nobs;
+				for (uint32_t ib = 0; ib < nopc[cb]; ib++)
+				{
+					// Calculate one word
+					word_t* lb = *(blb + ib);
 
-		*current_buffer = *la ^ *lb;
-		current_buffer++;
+					(*bl) = la[column] ^ lb[column];
+					bl++;
+				}
+			}
+		}
 	}
+
 	return OK;
 }
 
@@ -77,13 +96,4 @@ herr_t write_dm_attributes(const hid_t dataset_id, const uint32_t n_attributes,
 							   &n_matrix_lines);
 
 	return ret;
-}
-
-void free_dm(dm_t* dm)
-{
-	dm->n_matrix_lines = 0;
-	dm->s_offset	   = 0;
-	dm->s_size		   = 0;
-	free(dm->steps);
-	dm->steps = NULL;
 }

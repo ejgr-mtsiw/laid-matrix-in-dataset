@@ -27,7 +27,7 @@ oknok_t read_initial_attribute_totals(hid_t file_id, uint32_t* attribute_totals)
 	assert(dset_id != NOK);
 
 	// Read attribute totals
-	herr_t status = H5Dread(dset_id, H5T_NATIVE_UINT, H5S_ALL, H5S_ALL,
+	herr_t status = H5Dread(dset_id, H5T_NATIVE_UINT32, H5S_ALL, H5S_ALL,
 							H5P_DEFAULT, attribute_totals);
 	assert(status != NOK);
 
@@ -162,6 +162,7 @@ void print_solution(FILE* stream, cover_t* cover)
 	fprintf(stream, "Solution: { ");
 
 	uint32_t current_attribute = 0;
+	uint32_t solution_size	   = 0;
 
 	for (uint32_t w = 0; w < cover->n_words_in_a_line; w++)
 	{
@@ -173,10 +174,14 @@ void print_solution(FILE* stream, cover_t* cover)
 			{
 				// This attribute is set so it's part of the solution
 				fprintf(stream, "%d ", current_attribute);
+				solution_size++;
 			}
 		}
 	}
-	fprintf(stream, "}\n");
+
+	fprintf(stream, "}\nSolution has %d attributes: %d / %d = %3.4f%%\n",
+			solution_size, solution_size, cover->n_attributes,
+			((float) solution_size / (float) cover->n_attributes) * 100);
 }
 
 void free_cover(cover_t* cover)
