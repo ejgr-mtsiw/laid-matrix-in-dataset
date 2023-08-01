@@ -32,15 +32,6 @@ void set_jnsq_bits(word_t* line, uint32_t inconsistency,
 				   const uint8_t n_bits_for_class);
 
 /**
- * Compares 2 lines and updates jnsq on to_update if needed and updates
- * inconsistency level
- * The dataset must be sorted and not have any duplicates in it
- */
-void update_jnsq(word_t* to_update, const word_t* to_compare,
-				 uint32_t* inconsistency, const uint32_t n_attributes,
-				 const uint32_t n_words, const uint8_t n_bits_for_class);
-
-/**
  * Adds the JNSQs attributes to the dataset.
  * The dataset must be sorted and not have any duplicates in it
  *
