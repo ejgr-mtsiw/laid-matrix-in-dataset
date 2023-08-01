@@ -162,9 +162,6 @@ uint32_t remove_duplicates(dataset_t* dataset)
 
 oknok_t fill_class_arrays(dataset_t* dataset)
 {
-	// Number of classes
-	uint32_t nc = dataset->n_classes;
-
 	// Number of longs in a line
 	uint32_t n_words = dataset->n_words;
 
@@ -178,20 +175,10 @@ oknok_t fill_class_arrays(dataset_t* dataset)
 	uint8_t n_bits_for_class = dataset->n_bits_for_class;
 
 	// Array that stores the number of observations for each class
-	uint32_t* n_class_obs = (uint32_t*) calloc(nc, sizeof(uint32_t));
-	if (n_class_obs == NULL)
-	{
-		fprintf(stderr, "Error allocating n_observations_per_class\n");
-		return NOK;
-	}
+	uint32_t* n_class_obs = dataset->n_observations_per_class;
 
 	// Matrix that stores the list of observations per class
-	uint32_t* class_obs = (uint32_t*) calloc(nc * n_obs, sizeof(uint32_t*));
-	if (class_obs == NULL)
-	{
-		fprintf(stderr, "Error allocating observations_per_class\n");
-		return NOK;
-	}
+	word_t** class_obs = dataset->observations_per_class;
 
 	// Current line
 	word_t* line = dataset->data;
@@ -201,26 +188,14 @@ oknok_t fill_class_arrays(dataset_t* dataset)
 	{
 		uint32_t lc = get_class(line, n_attributes, n_words, n_bits_for_class);
 
-		class_obs[lc * n_obs + n_class_obs[lc]] = i;
+		class_obs[lc * n_obs + n_class_obs[lc]] = line;
 
 		n_class_obs[lc]++;
 
 		NEXT_LINE(line, n_words);
 	}
 
-	dataset->n_observations_per_class = n_class_obs;
-	dataset->observations_per_class	  = class_obs;
-
 	return OK;
-}
-
-void print_dataset_details(FILE* stream, const dataset_t* dataset)
-{
-	fprintf(stream, "Dataset:\n");
-	fprintf(stream, " - classes = %d ", dataset->n_classes);
-	fprintf(stream, "[%d bits]\n", dataset->n_bits_for_class);
-	fprintf(stream, " - attributes = %d \n", dataset->n_attributes);
-	fprintf(stream, " - observations = %d \n", dataset->n_observations);
 }
 
 void free_dataset(dataset_t* dataset)
