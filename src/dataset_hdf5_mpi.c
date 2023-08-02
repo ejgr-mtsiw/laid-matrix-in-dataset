@@ -42,7 +42,7 @@ oknok_t mpi_hdf5_open_dataset(const char* filename, const char* datasetname,
 	assert(ret != NOK);
 
 	// Open the dataset collectively
-	hid_t dset_id = H5Dopen2(f_id, datasetname, H5P_DEFAULT);
+	hid_t dset_id = H5Dopen(f_id, datasetname, H5P_DEFAULT);
 	assert(dset_id != NOK);
 
 	dataset->file_id	= f_id;
@@ -71,8 +71,8 @@ hid_t create_hdf5_dataset(const hid_t file_id, const char* name,
 	assert(dapl_id != NOK);
 
 	// Create the dataset collectively
-	hid_t dset_id = H5Dcreate2(file_id, name, datatype, filespace_id,
-							   H5P_DEFAULT, dcpl_id, dapl_id);
+	hid_t dset_id = H5Dcreate(file_id, name, datatype, filespace_id,
+							  H5P_DEFAULT, dcpl_id, dapl_id);
 	assert(dset_id != NOK);
 
 	// Close resources
@@ -84,13 +84,32 @@ hid_t create_hdf5_dataset(const hid_t file_id, const char* name,
 }
 
 oknok_t write_n_lines(const hid_t dset_id, const uint32_t start,
-					  const uint8_t n_lines_out, const uint32_t n_words,
+					  const uint32_t n_lines, const uint32_t n_words,
 					  const hid_t datatype, const void* buffer)
 {
 	/**
 	 * If we don't have anything to write, return here
 	 */
-	if (n_lines_out == 0 || n_words == 0)
+	if (n_lines == 0 || n_words == 0)
+	{
+		return OK;
+	}
+
+	// We will write n_lines_out lines at a time
+	hsize_t count[2]  = { n_lines, n_words };
+	hsize_t offset[2] = { start, 0 };
+
+	return write_to_hdf5_dataset(dset_id, offset, count, datatype, buffer);
+}
+
+oknok_t write_to_hdf5_dataset(const hid_t dset_id, const hsize_t offset[2],
+							  const hsize_t count[2], const hid_t datatype,
+							  const void* buffer)
+{
+	/**
+	 * If we don't have anything to write, return here
+	 */
+	if (count[0] == 0 || count[1] == 0)
 	{
 		return OK;
 	}
@@ -105,18 +124,14 @@ oknok_t write_n_lines(const hid_t dset_id, const uint32_t start,
 	hid_t filespace_id = H5Dget_space(dset_id);
 	assert(filespace_id != NOK);
 
-	// We will write n_lines_out lines at a time
-	hsize_t count[2]  = { n_lines_out, n_words };
-	hsize_t offset[2] = { start, 0 };
-
 	// Select hyperslab on file dataset
 	herr_t err = H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, offset, NULL,
 									 count, NULL);
 	assert(err != NOK);
 
 	// Create a memory dataspace to indicate the size of our buffer
-	hsize_t mem_dimensions[2] = { n_lines_out, n_words };
-	hid_t memspace_id		  = H5Screate_simple(2, mem_dimensions, NULL);
+	//	hsize_t mem_dimensions[2] = count;
+	hid_t memspace_id = H5Screate_simple(2, count, NULL);
 	assert(memspace_id != NOK);
 
 	// set up the collective transfer properties list
@@ -140,5 +155,6 @@ oknok_t write_n_lines(const hid_t dset_id, const uint32_t start,
 	H5Pclose(xfer_plist);
 	H5Sclose(memspace_id);
 	H5Sclose(filespace_id);
+
 	return OK;
 }

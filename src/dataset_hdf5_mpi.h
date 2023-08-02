@@ -36,7 +36,14 @@ hid_t create_hdf5_dataset(const hid_t file_id, const char* name,
  * Writes n_lines_out to the dataset
  */
 oknok_t write_n_lines(const hid_t dset_id, const uint32_t start,
-					  const uint8_t n_lines_out, const uint32_t n_words,
+					  const uint32_t n_lines, const uint32_t n_words,
 					  const hid_t datatype, const void* buffer);
+
+/**
+ * Writes data to a dataset
+ */
+oknok_t write_to_hdf5_dataset(const hid_t dset_id, const hsize_t offset[2],
+							  const hsize_t count[2], const hid_t datatype,
+							  const void* buffer);
 
 #endif // MPI_HDF5_DATASET_H

@@ -33,6 +33,9 @@
 oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 								const dataset_t* dset, const dm_t* dm)
 {
+	/**
+	 * Create line dataset
+	 */
 	hid_t dset_id = create_hdf5_dataset(hdf5_dset->file_id, DM_LINE_DATA,
 										dm->n_matrix_lines, dset->n_words,
 										H5T_NATIVE_UINT64);
@@ -156,10 +159,22 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 	uint32_t out_n_words = dm->n_matrix_lines / WORD_BITS
 		+ (dm->n_matrix_lines % WORD_BITS != 0);
 
-	// CREATE OUTPUT DATASET
+	/**
+	 * CREATE OUTPUT DATASET
+	 *
+	 * All processes must participate in the dataset creation event
+	 */
+
 	hid_t dset_id = create_hdf5_dataset(hdf5_dset->file_id, DM_COLUMN_DATA,
 										dset->n_attributes, out_n_words,
 										H5T_NATIVE_UINT64);
+
+	/**
+	 * Create dataset to hold the totals
+	 */
+	hid_t totals_dset_id
+		= create_hdf5_dataset(hdf5_dset->file_id, DM_ATTRIBUTE_TOTALS, 1,
+							  dset->n_attributes, H5T_NATIVE_UINT32);
 
 	/**
 	 * Attribute totals buffer
@@ -170,15 +185,17 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 	// This process will process this many words from the input dataset
 	uint32_t n_words_to_process = BLOCK_SIZE(rank, size, dset->n_words);
 
-	// The attribute blocks to generate/save start at
-	uint32_t attribute_block_start = BLOCK_LOW(rank, size, dset->n_words);
-	uint32_t attribute_block_end   = attribute_block_start + n_words_to_process;
-
 	// If we don't have anything to write return here
 	if (n_words_to_process == 0)
 	{
-		goto done;
+		H5Dclose(dset_id);
+		H5Dclose(totals_dset_id);
+		return OK;
 	}
+
+	// The attribute blocks to generate/save start at
+	uint32_t attribute_block_start = BLOCK_LOW(rank, size, dset->n_words);
+	uint32_t attribute_block_end   = attribute_block_start + n_words_to_process;
 
 	/**
 	 * Allocate input buffer
@@ -192,7 +209,7 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 	/**
 	 * Allocate output buffer
 	 *
-	 * Will hold up the matrix lines of to 64 attributes
+	 * Will hold up the matrix lines of up to 64 attributes
 	 */
 	word_t* out_buffer = (word_t*) malloc(out_n_words * 64 * sizeof(word_t));
 
@@ -292,7 +309,6 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 	free(out_buffer);
 	free(in_buffer);
 
-done:
 	H5Dclose(dset_id);
 
 	/**
@@ -301,38 +317,30 @@ done:
 	 * extra values in the attr_buffer that are not necessary.
 	 */
 	uint32_t n_attributes = n_words_to_process * WORD_BITS;
-	if ((attribute_block_start + n_words_to_process) * WORD_BITS
-		> dset->n_attributes)
+	if (attribute_block_end * WORD_BITS > dset->n_attributes)
 	{
 		n_attributes = dset->n_attributes - attribute_block_start * WORD_BITS;
 	}
 
-	/**
-	 * All processes must go here, even if we don't have nothing to write
-	 * because there's a dataset creation event inside!
-	 */
-	mpi_write_attribute_totals(hdf5_dset, attr_buffer,
+	mpi_write_attribute_totals(totals_dset_id,
 							   attribute_block_start * WORD_BITS, n_attributes,
-							   dset->n_attributes);
+							   attr_buffer);
 
 	free(attr_buffer);
+	H5Dclose(totals_dset_id);
 
 	return OK;
 }
 
-oknok_t mpi_write_attribute_totals(const dataset_hdf5_t* hdf5_dset,
-								   const uint32_t* data, const uint32_t start,
+oknok_t mpi_write_attribute_totals(const hid_t dataset_id, const uint32_t start,
 								   const uint32_t n_attributes,
-								   const uint32_t n_attributes_total)
+								   const uint32_t* data)
 {
 
-	hid_t dset_id
-		= create_hdf5_dataset(hdf5_dset->file_id, DM_ATTRIBUTE_TOTALS, 1,
-							  n_attributes_total, H5T_NATIVE_UINT32);
+	hsize_t offset[2] = { 0, start };
+	hsize_t count[2]  = { 1, n_attributes };
 
-	write_n_lines(dset_id, start, 1, n_attributes, H5T_NATIVE_UINT32, data);
-
-	H5Dclose(dset_id);
+	write_to_hdf5_dataset(dataset_id, offset, count, H5T_NATIVE_UINT32, data);
 
 	return OK;
 }

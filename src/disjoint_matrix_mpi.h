@@ -41,10 +41,9 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 /**
  * Writes the attribute totals metadata to the dataset
  */
-oknok_t mpi_write_attribute_totals(const dataset_hdf5_t* hdf5_dset,
-								   const uint32_t* data, const uint32_t start,
-								   const uint32_t n_lines,
-								   const uint32_t n_attributes);
+oknok_t mpi_write_attribute_totals(const hid_t dataset_id, const uint32_t start,
+								   const uint32_t n_attributes,
+								   const uint32_t* data);
 
 /**
  * Fills the initial class offsets for the disjoint matrix
