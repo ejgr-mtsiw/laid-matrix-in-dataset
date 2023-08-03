@@ -10,7 +10,8 @@
 #define SET_COVER_H
 
 #include "types/cover_t.h"
-#include "types/dataset_hdf5_t.h"
+#include "types/dataset_t.h"
+#include "types/dm_t.h"
 #include "types/oknok_t.h"
 
 #include "hdf5.h"
@@ -35,11 +36,6 @@ int64_t get_best_attribute_index(const uint32_t* totals,
  * Sets this attribute as selected
  */
 oknok_t mark_attribute_as_selected(cover_t* cover, int64_t attribute);
-
-/**
- * Updates the contribution of this line to the attributes totals
- */
-oknok_t remove_line_contribution(cover_t* cover, const word_t* line);
 
 /**
  * Updates the contribution of this line to the attributes totals

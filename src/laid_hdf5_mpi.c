@@ -14,11 +14,11 @@
 #include "jnsq.h"
 #include "set_cover.h"
 #include "set_cover_hdf5_mpi.h"
-#include "types/class_offsets_t.h"
 #include "types/cover_t.h"
 #include "types/dataset_hdf5_t.h"
 #include "types/dataset_t.h"
 #include "types/dm_t.h"
+#include "types/steps_t.h"
 #include "types/word_t.h"
 #include "utils/bit.h"
 #include "utils/block.h"
@@ -370,6 +370,9 @@ int main(int argc, char** argv)
 	dm.s_offset = BLOCK_LOW(rank, size, dm.n_matrix_lines);
 	dm.s_size	= BLOCK_SIZE(rank, size, dm.n_matrix_lines);
 
+	dm.steps = (steps_t*) malloc(dm.s_size * sizeof(steps_t));
+	generate_steps(&dataset, &dm);
+
 	TOCK;
 
 	if (rank == ROOT_RANK)
@@ -414,7 +417,7 @@ int main(int argc, char** argv)
 
 	TICK;
 
-	mpi_create_column_dataset(&hdf5_dset, &dataset, &dm, rank, size);
+	mpi_create_column_dataset(&hdf5_dset, &dataset, rank, size);
 
 	ROOT_SAYS("  Column dataset done: ");
 	TOCK;
@@ -430,6 +433,9 @@ int main(int argc, char** argv)
 	dataset.data = NULL;
 
 	free_dataset(&dataset);
+
+	free(dm.steps);
+	dm.steps = NULL;
 
 apply_set_cover:
 
@@ -499,7 +505,7 @@ apply_set_cover:
 	cover.n_words_in_a_line = line_dset_id.dimensions[1];
 
 	/**
-	 * Each process only needs acces to some rows, we don't need the
+	 * Each process only needs access to some rows, we don't need the
 	 * entire column (attribute data). Data is stored in words of
 	 * WORD_BITS size, so we distribute by words instead of by attributes
 	 */

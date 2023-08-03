@@ -10,6 +10,8 @@
 #ifndef DM_T_H
 #define DM_T_H
 
+#include "steps_t.h"
+
 #include <stdint.h>
 
 typedef struct dm_t
@@ -28,6 +30,11 @@ typedef struct dm_t
 	 * Number of lines we can generate
 	 */
 	uint32_t s_size;
+
+	/**
+	 * Steps to generate the partial disjoint matrix
+	 */
+	steps_t* steps;
 } dm_t;
 
 #endif // DM_T_H

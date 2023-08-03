@@ -9,6 +9,8 @@
 #include "set_cover.h"
 
 #include "dataset_hdf5.h"
+#include "types/dataset_t.h"
+#include "types/dm_t.h"
 #include "types/oknok_t.h"
 #include "types/word_t.h"
 #include "utils/bit.h"
@@ -55,47 +57,6 @@ int64_t get_best_attribute_index(const uint32_t* totals,
 	return max_attribute;
 }
 
-oknok_t remove_line_contribution(cover_t* cover, const word_t* line)
-{
-	/**
-	 * Current attribute
-	 */
-	uint32_t c_attribute = 0;
-
-	/**
-	 * Current word
-	 */
-	uint32_t c_word = 0;
-
-	/**
-	 * Number of words with WORD_BITS attributes
-	 */
-	uint32_t n_full_words = cover->n_words_in_a_line - 1;
-
-	/**
-	 * Last bit to process in the last word
-	 */
-	uint8_t n_last_word = WORD_BITS - (cover->n_attributes % WORD_BITS);
-
-	// Process full words
-	for (c_word = 0; c_word < n_full_words; c_word++)
-	{
-		for (int8_t bit = WORD_BITS - 1; bit >= 0; bit--, c_attribute++)
-		{
-			cover->attribute_totals[c_attribute]
-				-= BIT_CHECK(line[c_word], bit);
-		}
-	}
-
-	// Process last word
-	for (int8_t bit = WORD_BITS - 1; bit >= n_last_word; bit--, c_attribute++)
-	{
-		cover->attribute_totals[c_attribute] -= BIT_CHECK(line[c_word], bit);
-	}
-
-	return OK;
-}
-
 oknok_t add_line_contribution(cover_t* cover, const word_t* line)
 {
 	/**
@@ -116,22 +77,27 @@ oknok_t add_line_contribution(cover_t* cover, const word_t* line)
 	/**
 	 * Last bit to process in the last word
 	 */
-	uint8_t n_last_word = WORD_BITS - (cover->n_attributes % WORD_BITS);
+	uint8_t last_bit = WORD_BITS - (cover->n_attributes % WORD_BITS);
 
 	// Process full words
 	for (c_word = 0; c_word < n_full_words; c_word++)
 	{
 		for (int8_t bit = WORD_BITS - 1; bit >= 0; bit--, c_attribute++)
 		{
-			cover->attribute_totals[c_attribute]
-				+= BIT_CHECK(line[c_word], bit);
+			if (BIT_CHECK(line[c_word], bit))
+			{
+				cover->attribute_totals[c_attribute]++;
+			}
 		}
 	}
 
 	// Process last word
-	for (int8_t bit = WORD_BITS - 1; bit >= n_last_word; bit--, c_attribute++)
+	for (int8_t bit = WORD_BITS - 1; bit >= last_bit; bit--, c_attribute++)
 	{
-		cover->attribute_totals[c_attribute] += BIT_CHECK(line[c_word], bit);
+		if (BIT_CHECK(line[c_word], bit))
+		{
+			cover->attribute_totals[c_attribute]++;
+		}
 	}
 
 	return OK;

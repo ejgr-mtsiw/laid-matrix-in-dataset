@@ -22,8 +22,8 @@
 /**
  * Reads attribute data
  */
-oknok_t get_column(const hid_t dataset, const uint32_t attribute, const uint32_t offset,
-				   const uint32_t count, word_t* column);
+oknok_t get_column(const hid_t dataset, const uint32_t attribute,
+				   const uint32_t offset, const uint32_t count, word_t* column);
 
 /**
  * Updates covered status of the matrix lines
@@ -34,6 +34,7 @@ oknok_t update_covered_lines_mpi(const word_t* column, const uint32_t n_words,
 /**
  *
  */
-oknok_t update_attribute_totals_mpi(cover_t* cover, dataset_hdf5_t* line_dataset);
+oknok_t update_attribute_totals_mpi(cover_t* cover,
+									dataset_hdf5_t* line_dataset);
 
 #endif // SET_COVER_HDF5_MPI_H
