@@ -555,8 +555,10 @@ apply_set_cover:
 	}
 
 	/**
-	 * If we only have one process then the local totals
-	 * and the global totals are the same
+	 * This copy avoids having to check the entire dataset on the first run
+	 * if we only have one process, because if we only have one process then
+	 * the local totals and the global totals are the same, and we don't
+	 * need to calculate them
 	 */
 	if (size == 1)
 	{
