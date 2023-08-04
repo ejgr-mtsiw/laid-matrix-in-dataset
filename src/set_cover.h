@@ -41,6 +41,7 @@ oknok_t mark_attribute_as_selected(cover_t* cover, int64_t attribute);
  * Updates the contribution of this line to the attributes totals
  */
 oknok_t add_line_contribution(cover_t* cover, const word_t* line);
+oknok_t sub_line_contribution(cover_t* cover, const word_t* line);
 
 /**
  * Updates the list of covered lines, adding the lines covered by column

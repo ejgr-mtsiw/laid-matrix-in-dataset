@@ -74,8 +74,8 @@ oknok_t update_covered_lines_mpi(const word_t* column, const uint32_t n_words,
 	return OK;
 }
 
-oknok_t update_attribute_totals_mpi(cover_t* cover,
-									dataset_hdf5_t* line_dataset)
+oknok_t update_attribute_totals_add_mpi(cover_t* cover,
+										dataset_hdf5_t* line_dataset)
 {
 	oknok_t ret = OK;
 
@@ -99,18 +99,10 @@ oknok_t update_attribute_totals_mpi(cover_t* cover,
 	{
 		word_t attribute_values = cover->covered_lines[w];
 
-		uint8_t last_bit_to_process = 0;
-		if (end_line - current_line < WORD_BITS)
-		{
-			last_bit_to_process = WORD_BITS - (end_line - current_line);
-		}
-
 		// Check the remaining lines
-		for (int8_t bit = WORD_BITS - 1; bit >= last_bit_to_process;
+		for (int8_t bit = WORD_BITS - 1; bit >= 0 && current_line < end_line;
 			 bit--, current_line++)
 		{
-			// if (!(attribute_values & AND_MASK_TABLE[bit]))
-
 			if (!BIT_CHECK(attribute_values, bit))
 			{
 				// This line is not covered
@@ -118,10 +110,6 @@ oknok_t update_attribute_totals_mpi(cover_t* cover,
 				// Read line from dataset
 				ret = hdf5_read_line(line_dataset, current_line,
 									 cover->n_words_in_a_line, line);
-				if (ret != OK)
-				{
-					goto out_free_line_buffer;
-				}
 
 				// Increment totals
 				add_line_contribution(cover, line);
@@ -129,7 +117,58 @@ oknok_t update_attribute_totals_mpi(cover_t* cover,
 		}
 	}
 
-out_free_line_buffer:
+	free(line);
+
+	return ret;
+}
+
+oknok_t update_attribute_totals_sub_mpi(cover_t* cover,
+										dataset_hdf5_t* line_dataset,
+										word_t* column)
+{
+	oknok_t ret = OK;
+
+	word_t* line = (word_t*) malloc(sizeof(word_t) * cover->n_words_in_a_line);
+	assert(line != NULL);
+
+	/**
+	 * Define the lines of the physical dataset this process must process
+	 */
+	uint32_t current_line = cover->column_offset_words * WORD_BITS;
+	uint32_t end_line	  = current_line + cover->column_n_words * WORD_BITS;
+	if (end_line > cover->n_matrix_lines)
+	{
+		end_line = cover->n_matrix_lines;
+	}
+
+	for (uint32_t w = 0; w < cover->column_n_words; w++)
+	{
+		// cov col
+		//   0   0   0
+		//   0   1   1
+		//   1   0   0
+		//   1   1   0
+
+		word_t attribute_values = ~cover->covered_lines[w] & column[w];
+
+		// Check the lines
+		for (int8_t bit = WORD_BITS - 1; bit >= 0 && current_line < end_line;
+			 bit--, current_line++)
+		{
+			if (BIT_CHECK(attribute_values, bit))
+			{
+				// This line is covered
+
+				// Read line from dataset
+				ret = hdf5_read_line(line_dataset, current_line,
+									 cover->n_words_in_a_line, line);
+
+				// Increment totals
+				sub_line_contribution(cover, line);
+			}
+		}
+	}
+
 	free(line);
 
 	return ret;

@@ -34,7 +34,10 @@ oknok_t update_covered_lines_mpi(const word_t* column, const uint32_t n_words,
 /**
  *
  */
-oknok_t update_attribute_totals_mpi(cover_t* cover,
-									dataset_hdf5_t* line_dataset);
+oknok_t update_attribute_totals_add_mpi(cover_t* cover,
+										dataset_hdf5_t* line_dataset);
+oknok_t update_attribute_totals_sub_mpi(cover_t* cover,
+										dataset_hdf5_t* line_dataset,
+										word_t* column);
 
 #endif // SET_COVER_HDF5_MPI_H

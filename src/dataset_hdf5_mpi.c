@@ -66,6 +66,10 @@ hid_t create_hdf5_dataset(const hid_t file_id, const char* name,
 	hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
 	assert(dcpl_id != NOK);
 
+	// Create a dataset creation property list and set it to use chunking
+	// hsize_t chunk_dims[2] = {1, n_words};
+	// H5Pset_chunk(dcpl_id, 2, chunk_dims);
+
 	// Create a dataset access property list
 	hid_t dapl_id = H5Pcreate(H5P_DATASET_ACCESS);
 	assert(dapl_id != NOK);
@@ -142,10 +146,8 @@ oknok_t write_to_hdf5_dataset(const hid_t dset_id, const hsize_t offset[2],
 	 * H5FD_MPIO_COLLECTIVE transfer mode is not favourable:
 	 * https://docs.hdfgroup.org/hdf5/rfc/coll_ind_dd6.pdf
 	 */
-	/*
-	err = H5Pset_dxpl_mpio(xfer_plist, H5FD_MPIO_COLLECTIVE);
-	assert(err != NOK);
-	*/
+	// err = H5Pset_dxpl_mpio(xfer_plist, H5FD_MPIO_COLLECTIVE);
+	// assert(err != NOK);
 
 	// Write buffer to dataset
 	err = H5Dwrite(dset_id, datatype, memspace_id, filespace_id, xfer_plist,

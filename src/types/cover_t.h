@@ -46,6 +46,11 @@ typedef struct cover_t
 	word_t* covered_lines;
 
 	/**
+	 * Number of lines that are not covered yet
+	 */
+	uint32_t n_uncovered_lines;
+
+	/**
 	 * Bit array of selected attributes
 	 */
 	word_t* selected_attributes;

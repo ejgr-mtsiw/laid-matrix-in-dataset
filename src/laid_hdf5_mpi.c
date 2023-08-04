@@ -521,8 +521,12 @@ apply_set_cover:
 		= (word_t*) calloc(cover.column_n_words, sizeof(word_t));
 
 	// The partial sum for the attributes
-	cover.attribute_totals
-		= (uint32_t*) calloc(cover.n_attributes, sizeof(uint32_t));
+	cover.attribute_totals = (uint32_t*) calloc(
+		cover.n_words_in_a_line * WORD_BITS, sizeof(uint32_t));
+
+	// No line is covered so far
+	cover.n_uncovered_lines
+		= cover.n_matrix_lines - cover.column_offset_words * WORD_BITS;
 
 	/**
 	 * Partial column data to process
@@ -534,10 +538,9 @@ apply_set_cover:
 	 */
 	uint32_t* global_attribute_totals = NULL;
 
-	/**
-	 * Number of uncovered lines. Only root uses this.
-	 */
-	uint32_t n_uncovered_lines = 0;
+	// Number of lines not covered in the full matrix
+	// Only root uses this
+	uint32_t global_n_uncovered_lines = cover.n_matrix_lines;
 
 	if (rank == ROOT_RANK)
 	{
@@ -549,9 +552,16 @@ apply_set_cover:
 
 		read_initial_attribute_totals(hdf5_dset.file_id,
 									  global_attribute_totals);
+	}
 
-		// No line is covered so far
-		n_uncovered_lines = cover.n_matrix_lines;
+	/**
+	 * If we only have one process then the local totals
+	 * and the global totals are the same
+	 */
+	if (size == 1)
+	{
+		memcpy(cover.attribute_totals, global_attribute_totals,
+			   cover.n_attributes * sizeof(uint32_t));
 	}
 
 	while (true)
@@ -572,11 +582,11 @@ apply_set_cover:
 			mark_attribute_as_selected(&cover, best_attribute);
 
 			// Update number of lines remaining
-			n_uncovered_lines -= global_attribute_totals[best_attribute];
+			global_n_uncovered_lines -= global_attribute_totals[best_attribute];
 
 			// If we covered all of them, we can leave earlier. A value < 0
 			// indicates to all processes that the solution was found
-			if (n_uncovered_lines == 0)
+			if (global_n_uncovered_lines == 0)
 			{
 				best_attribute = -1;
 			}
@@ -591,11 +601,14 @@ apply_set_cover:
 			goto show_solution;
 		}
 
+		// Update number of lines remaining
+		cover.n_uncovered_lines -= cover.attribute_totals[best_attribute];
+
 		/*
 		  Even if this process has no lines it needs to participate in
 		  the MPI_Reduce
 		 */
-		if (cover.column_n_words == 0)
+		if (cover.n_uncovered_lines == 0)
 		{
 			SAY("NOTHING TO DO!\n");
 			goto mpi_reduce;
@@ -605,13 +618,47 @@ apply_set_cover:
 		get_column(column_dset_id.dataset_id, best_attribute,
 				   cover.column_offset_words, cover.column_n_words, column);
 
-		// Update covered lines array
-		update_covered_lines_mpi(column, cover.column_n_words,
-								 cover.covered_lines);
+		/**
+		 * If this attribute covers more lines than what remains
+		 * to be covered we calculate the sum of the remaining lines.
+		 * If the attribute covers only a few lines we remove the
+		 * contribution of the covered lines.
+		 * The objetive is to reduce the number of lines read
+		 * from the dataset.
+		 *
+		 * On the first run/attribute we have the global totals,
+		 * but not the local totals for each process, so we need to
+		 * check the uncovered lines first
+		 *
+		 * On the first run, when size > 1, cover.attribute_totals[X] is 0
+		 */
+		oknok_t sum_uncovered_lines = NOK;
+		if (cover.attribute_totals[best_attribute] > cover.n_uncovered_lines
+			|| cover.attribute_totals[best_attribute] == 0)
+		{
+			// We'll check the uncovered lines
+			sum_uncovered_lines = OK;
+		}
 
-		// Calculate the totals for all the attributes
-		// for the remaining uncovered lines
-		update_attribute_totals_mpi(&cover, &line_dset_id);
+		if (sum_uncovered_lines == OK)
+		{
+			// Update covered lines array
+			update_covered_lines_mpi(column, cover.column_n_words,
+									 cover.covered_lines);
+
+			// Calculate the totals for all the attributes
+			// for the remaining uncovered lines
+			update_attribute_totals_add_mpi(&cover, &line_dset_id);
+		}
+		else
+		{
+			// Remove contribution from newly covered lines
+			update_attribute_totals_sub_mpi(&cover, &line_dset_id, column);
+
+			// Update covered lines array
+			update_covered_lines_mpi(column, cover.column_n_words,
+									 cover.covered_lines);
+		}
 
 mpi_reduce:
 		// Gather all the partial totals

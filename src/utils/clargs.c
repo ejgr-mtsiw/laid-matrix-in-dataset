@@ -20,8 +20,8 @@ int read_args(int argc, char** argv, clargs_t* args)
 	const char* value;
 	cag_option_context context;
 
-	args->datasetname=NULL;
-	args->filename=NULL;
+	args->datasetname = NULL;
+	args->filename	  = NULL;
 
 	/**
 	 * This is the main configuration of all options available.

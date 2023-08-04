@@ -64,39 +64,33 @@ oknok_t add_line_contribution(cover_t* cover, const word_t* line)
 	 */
 	uint32_t c_attribute = 0;
 
-	/**
-	 * Current word
-	 */
-	uint32_t c_word = 0;
-
-	/**
-	 * Number of words with WORD_BITS attributes
-	 */
-	uint32_t n_full_words = cover->n_words_in_a_line - 1;
-
-	/**
-	 * Last bit to process in the last word
-	 */
-	uint8_t last_bit = WORD_BITS - (cover->n_attributes % WORD_BITS);
-
-	// Process full words
-	for (c_word = 0; c_word < n_full_words; c_word++)
+	// Process words
+	for (uint32_t c_word = 0; c_word < cover->n_words_in_a_line; c_word++)
 	{
 		for (int8_t bit = WORD_BITS - 1; bit >= 0; bit--, c_attribute++)
 		{
-			if (BIT_CHECK(line[c_word], bit))
-			{
-				cover->attribute_totals[c_attribute]++;
-			}
+			cover->attribute_totals[c_attribute]
+				+= BIT_CHECK(line[c_word], bit);
 		}
 	}
 
-	// Process last word
-	for (int8_t bit = WORD_BITS - 1; bit >= last_bit; bit--, c_attribute++)
+	return OK;
+}
+
+oknok_t sub_line_contribution(cover_t* cover, const word_t* line)
+{
+	/**
+	 * Current attribute
+	 */
+	uint32_t c_attribute = 0;
+
+	// Process words
+	for (uint32_t c_word = 0; c_word < cover->n_words_in_a_line; c_word++)
 	{
-		if (BIT_CHECK(line[c_word], bit))
+		for (int8_t bit = WORD_BITS - 1; bit >= 0; bit--, c_attribute++)
 		{
-			cover->attribute_totals[c_attribute]++;
+			cover->attribute_totals[c_attribute]
+				-= BIT_CHECK(line[c_word], bit);
 		}
 	}
 
