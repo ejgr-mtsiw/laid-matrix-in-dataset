@@ -24,7 +24,7 @@ $(APP_DIR)/$(TARGET): $(OBJECTS)
 
 -include $(DEPENDENCIES)
 
-.PHONY: all build clean debug release info
+.PHONY: all build clean debug release release-with-microseconds info
 
 build:
 	@mkdir -p $(APP_DIR)
@@ -35,6 +35,9 @@ debug: all
 
 release: CPPFLAGS += -O3 -march=native
 release: all
+
+release-with-microseconds: CPPFLAGS += -O3 -march=native -D_POSIX_C_SOURCE=199309L
+release-with-microseconds: all
 
 clean:
 	-@rm -rvf $(OBJ_DIR)/*

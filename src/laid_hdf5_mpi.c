@@ -140,20 +140,12 @@ int main(int argc, char** argv)
 	/**
 	 * Timing for the full operation
 	 */
-	time_t main_tick = 0, main_tock = 0;
+	SETUP_TIMING_GLOBAL;
 
 	/**
 	 * Local timing structures
 	 */
-	time_t tick = 0, tock = 0;
-
-	if (rank == ROOT_RANK)
-	{
-		/**
-		 * Timing for the full operation
-		 */
-		main_tick = time(0);
-	}
+	SETUP_TIMING;
 
 	/**
 	 * The dataset
@@ -677,9 +669,6 @@ show_solution:
 		print_solution(stdout, &cover);
 		fprintf(stdout, "All done! ");
 
-		main_tock = time(0);
-		fprintf(stdout, "[%lds]\n", main_tock - main_tick);
-
 		free(global_attribute_totals);
 		global_attribute_totals = NULL;
 	}
@@ -692,6 +681,8 @@ show_solution:
 	H5Dclose(line_dset_id.dataset_id);
 	H5Dclose(column_dset_id.dataset_id);
 	H5Fclose(hdf5_dset.file_id);
+
+	PRINT_TIMING_GLOBAL;
 
 	// shut down MPI
 	MPI_Finalize();
