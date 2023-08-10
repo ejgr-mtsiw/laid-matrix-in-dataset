@@ -13,6 +13,9 @@
 #	on CIRRUS-A (Lisbon) choose for example hpc
 #SBATCH --partition=short
 
+#SBATCH --output=out.%x.%j
+#SBATCH --error=err.%x.%j
+
 # Used to guarantee that the environment does not have any other loaded module
 module purge
 
