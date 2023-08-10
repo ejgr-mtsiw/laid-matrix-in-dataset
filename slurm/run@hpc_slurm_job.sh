@@ -4,6 +4,9 @@
 
 #SBATCH --job-name="P2-1x1-bench_dataset@hpc"
 
+#SBATCH --output=out.%x.%j
+##SBATCH --error=err.%x.%j
+
 ##SBATCH --time=0:1:0
 
 #SBATCH --ntasks=1
@@ -47,16 +50,12 @@ module load gcc11/libs/hdf5/1.14.0
 #	on CIRRUS-A (Lisbon) choose for example hpc
 #SBATCH --partition=hpc
 
-#SBATCH --output=out.%x.%j
-#SBATCH --error=err.%x.%j
-
 ## DON'T CHANGE THIS!
-
-# Run
 
 # Move to base dir
 cd ..
 
+# Run
 if [ -f "$INPUT_DATASET_FILE" ]; then
 	echo "=== Making a copy of the dataset ==="
 	echo "cp $INPUT_DATASET_FILE $OUTPUT_DATASET_FILE"

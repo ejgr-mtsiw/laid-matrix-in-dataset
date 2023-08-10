@@ -2,6 +2,9 @@
 
 #SBATCH --job-name="P2-compile@short"
 
+#SBATCH --output=out.%x.%j
+##SBATCH --error=err.%x.%j
+
 ##SBATCH --time=0:1:0
 
 #SBATCH --ntasks=1
@@ -12,9 +15,6 @@
 #	on CIRRUS-B (Minho)  choose for example HPC_4_Days
 #	on CIRRUS-A (Lisbon) choose for example hpc
 #SBATCH --partition=short
-
-#SBATCH --output=out.%x.%j
-#SBATCH --error=err.%x.%j
 
 # Used to guarantee that the environment does not have any other loaded module
 module purge
