@@ -1,4 +1,4 @@
-CC				:= mpicc
+CC				:= h5pcc
 CPPFLAGS		:= -Wall -std=c99
 LDFLAGS			:= -lm -lhdf5 -lmpi
 BUILD			:= ./bin
