@@ -9,7 +9,7 @@
 #ifndef TYPES_COVER_T_H
 #define TYPES_COVER_T_H
 
-#include "types/word_t.h"
+#include "word_t.h"
 
 #include <stdint.h>
 

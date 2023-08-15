@@ -9,7 +9,7 @@
 #ifndef UTILS_OUTPUT_H__
 #define UTILS_OUTPUT_H__
 
-#include "utils/ranks.h"
+#include "ranks.h"
 #include <stdio.h>
 
 #define SAY(what)                                                              \
