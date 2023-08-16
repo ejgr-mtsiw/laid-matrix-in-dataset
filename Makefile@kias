@@ -1,11 +1,11 @@
 CC				:= h5pcc
 CPPFLAGS		:= -Wall -Wextra -Werror -pedantic-errors -std=c99
-LDFLAGS			:= -L/usr/lib -L/usr/local/lib -lm -lhdf5 -lmpi
+LDFLAGS			:= -lm
 BUILD			:= ./bin
 OBJ_DIR			:= $(BUILD)/objects
 APP_DIR			:= $(BUILD)
 TARGET			:= laid-hdf5-mpi
-INCLUDE			:= -I./src -I/usr/local/include -I /usr/include 
+INCLUDE			:= -I./src 
 SRC_DIRS		:= ./src
 SRC				:= $(shell find $(SRC_DIRS) -name *.c)
 
@@ -30,7 +30,7 @@ build:
 	@mkdir -p $(APP_DIR)
 	@mkdir -p $(OBJ_DIR)
 
-debug: CPPFLAGS += -DDEBUG -fsanitize=address,leak,undefined -g
+debug: CPPFLAGS += -DDEBUG -g
 debug: all
 
 release: CPPFLAGS += -O3 -march=native

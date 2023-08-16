@@ -1,6 +1,6 @@
 CC				:= h5pcc
 CPPFLAGS		:= -Wall -std=c99
-LDFLAGS			:= -lm -lhdf5 -lmpi
+LDFLAGS			:= -lm
 BUILD			:= ./bin
 OBJ_DIR			:= $(BUILD)/objects
 APP_DIR			:= $(BUILD)
@@ -24,17 +24,20 @@ $(APP_DIR)/$(TARGET): $(OBJECTS)
 
 -include $(DEPENDENCIES)
 
-.PHONY: all build clean debug release info
+.PHONY: all build clean debug release release-with-microseconds info
 
 build:
 	@mkdir -p $(APP_DIR)
 	@mkdir -p $(OBJ_DIR)
 
-debug: CPPFLAGS += -DDEBUG -fsanitize=address,leak,undefined -g
+debug: CPPFLAGS += -DDEBUG -g
 debug: all
 
 release: CPPFLAGS += -O3 -march=native
 release: all
+
+release-with-microseconds: CPPFLAGS += -O3 -march=native -D_POSIX_C_SOURCE=199309L
+release-with-microseconds: all
 
 clean:
 	-@rm -rvf $(OBJ_DIR)/*
