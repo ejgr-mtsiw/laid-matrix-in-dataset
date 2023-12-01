@@ -436,6 +436,14 @@ apply_set_cover:
 
 	// We no longer need to keep the original dataset open
 	H5Dclose(hdf5_dset.dataset_id);
+	H5Fclose(hdf5_dset.file_id);
+
+		PRINT_TIMING_GLOBAL;
+
+		// shut down MPI
+		MPI_Finalize();
+
+		return EXIT_SUCCESS;
 
 	/**
 	 * All:

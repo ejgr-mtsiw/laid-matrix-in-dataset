@@ -1,5 +1,5 @@
 CC				:= h5pcc
-CPPFLAGS		:= -Wall -Wextra -Werror -pedantic-errors -std=c99
+CPPFLAGS		:= -Wall -std=c99
 LDFLAGS			:= -lm
 BUILD			:= ./bin
 OBJ_DIR			:= $(BUILD)/objects

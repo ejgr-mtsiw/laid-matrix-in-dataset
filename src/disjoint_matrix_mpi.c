@@ -129,8 +129,8 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 
 		if (++n_lines_out == N_LINES_OUT)
 		{
-			write_n_lines(dset_id, offset, n_lines_out, dset->n_words,
-						  H5T_NATIVE_UINT64, buffer);
+//			write_n_lines(dset_id, offset, n_lines_out, dset->n_words,
+//						  H5T_NATIVE_UINT64, buffer);
 
 			offset += n_lines_out;
 			n_lines_out = 0;
@@ -141,8 +141,8 @@ oknok_t mpi_create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 	// We may have lines to write
 	if (n_lines_out > 0)
 	{
-		write_n_lines(dset_id, offset, n_lines_out, dset->n_words,
-					  H5T_NATIVE_UINT64, buffer);
+//		write_n_lines(dset_id, offset, n_lines_out, dset->n_words,
+//					  H5T_NATIVE_UINT64, buffer);
 	}
 
 	free(buffer);
@@ -318,8 +318,8 @@ oknok_t mpi_create_column_dataset(const dataset_hdf5_t* hdf5_dset,
 		}
 
 		// Save transposed array to file
-		write_n_lines(dset_id, current_attribute_word * 64, n_lines_to_write,
-					  out_n_words, H5T_NATIVE_UINT64, out_buffer);
+//		write_n_lines(dset_id, current_attribute_word * 64, n_lines_to_write,
+//					  out_n_words, H5T_NATIVE_UINT64, out_buffer);
 	}
 
 	free(out_buffer);
